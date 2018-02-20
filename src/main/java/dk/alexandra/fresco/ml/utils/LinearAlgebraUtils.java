@@ -45,11 +45,8 @@ public class LinearAlgebraUtils {
    * @return
    */
   public <T> Matrix<T> createColumnVector(List<T> list) {
-    ArrayList<ArrayList<T>> rows = new ArrayList<>();
-    for (T e : list) {
-      rows.add(new ArrayList<>(Collections.singletonList(e)));
-    }
-    return new Matrix<>(list.size(), 1, rows);
+    return new Matrix<>(list.size(), 1,
+        i -> new ArrayList<>(Collections.singletonList(list.get(i))));
 
   }
 

@@ -49,7 +49,7 @@ public class DefaultActivationFunctions implements ActivationFunctions {
     return (builder, x) -> {
       return builder.seq(r1 -> {
         RealNumeric numeric = provider.apply(r1);
-        DRes<SInt> compare = numeric.advanced().leq(numeric.numeric().known(BigDecimal.ZERO), x);
+        DRes<SInt> compare = numeric.numeric().leq(numeric.numeric().known(BigDecimal.ZERO), x);
         return numeric.numeric().mult(x, numeric.numeric().fromSInt(compare));
       });
     };
@@ -64,8 +64,8 @@ public class DefaultActivationFunctions implements ActivationFunctions {
   public DRes<Matrix<DRes<SReal>>> softmax(Matrix<DRes<SReal>> v) {
     return builder.par(r1 -> {
       RealNumeric numeric = provider.apply(r1);
-      List<DRes<SReal>> exps = v.getColumn(0).stream().map(e -> numeric.advanced().exp(e))
-          .collect(Collectors.toList());
+      List<DRes<SReal>> exps =
+          v.getColumn(0).stream().map(e -> numeric.advanced().exp(e)).collect(Collectors.toList());
       return () -> exps;
     }).seq((r2, l) -> {
       RealNumeric numeric = provider.apply(r2);
@@ -98,26 +98,22 @@ public class DefaultActivationFunctions implements ActivationFunctions {
       });
     };
   }
-  
+
   /**
    * Apply the given map to all elements in the given matrix.
    * 
-   * @param m 
+   * @param m
    * @param map
    * @return
    */
   private DRes<Matrix<DRes<SReal>>> ebe(Matrix<DRes<SReal>> m,
       BiFunction<ProtocolBuilderNumeric, DRes<SReal>, DRes<SReal>> map) {
     return builder.par(par -> {
-      ArrayList<ArrayList<DRes<SReal>>> rows = new ArrayList<>(m.getHeight());
-      for (int i = 0; i < m.getHeight(); i++) {
-        ArrayList<DRes<SReal>> row = new ArrayList<>();
-        for (int j = 0; j < m.getWidth(); j++) {
-          row.add(map.apply(par, m.getRow(i).get(j)));
-        }
-        rows.add(row);
-      }
-      return () -> new Matrix<>(m.getHeight(), m.getWidth(), rows);
+      Matrix<DRes<SReal>> matrix = new Matrix<>(m.getHeight(), m.getWidth(), i -> {
+        return new ArrayList<>(
+            m.getRow(i).stream().map(x -> map.apply(par, x)).collect(Collectors.toCollection(ArrayList::new)));
+      });
+      return () -> matrix;
     });
   }
 }
