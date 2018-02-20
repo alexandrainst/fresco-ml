@@ -3,7 +3,7 @@ package dk.alexandra.fresco.ml;
 import dk.alexandra.fresco.decimal.RealNumeric;
 import dk.alexandra.fresco.decimal.RealNumericProvider;
 import dk.alexandra.fresco.decimal.SReal;
-import dk.alexandra.fresco.decimal.floating.binary.BinaryFloatNumeric;
+import dk.alexandra.fresco.decimal.fixed.FixedNumeric;
 import dk.alexandra.fresco.framework.Application;
 import dk.alexandra.fresco.framework.DRes;
 import dk.alexandra.fresco.framework.TestThreadRunner.TestThread;
@@ -28,7 +28,7 @@ import org.junit.Assert;
 
 public class NNTests {
 
-  private static RealNumericProvider defaultRealNumeric = scope -> new BinaryFloatNumeric(scope);
+  private static RealNumericProvider defaultRealNumeric = scope -> new FixedNumeric(scope);
   private static int defaultPrecision = 4;
 
   public static class TestNN1layer<ResourcePoolT extends ResourcePool>
