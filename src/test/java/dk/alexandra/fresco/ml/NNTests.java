@@ -55,7 +55,7 @@ public class NNTests {
                       getClass().getClassLoader().getResource("mnist/1-layer/1W.csv").getFile()),
                   new File(
                       getClass().getClassLoader().getResource("mnist/1-layer/1b.csv").getFile()),
-                  ActivationFunctions.Type.SOFTMAX));
+                  ActivationFunctions.Type.IDENTITY));
 
           // Test data
           Matrix<BigDecimal> testVectors = loader.matrixFromCsv(
@@ -126,7 +126,7 @@ public class NNTests {
                       getClass().getClassLoader().getResource("mnist/2-layer/2W.csv").getFile()),
                   new File(
                       getClass().getClassLoader().getResource("mnist/2-layer/2b.csv").getFile()),
-                  ActivationFunctions.Type.SOFTMAX));
+                  ActivationFunctions.Type.IDENTITY));
 
           // Test data
           Matrix<BigDecimal> testVectors = loader.matrixFromCsv(
@@ -157,12 +157,16 @@ public class NNTests {
                 .collect(Collectors.toList());
           };
 
+          int correct = 0;
           List<Matrix<BigDecimal>> output = runApplication(testApplication);
           for (int i = 0; i < output.size(); i++) {
             RealVector a = utils.convert(output.get(i)).getColumnVector(0);
-            Assert.assertEquals(expected.get(i).intValue(), a.getMaxIndex());
+            if (expected.get(i).intValue() == a.getMaxIndex()) {
+              correct++;
+            }
           }
-        }
+          Assert.assertEquals(correct, tests);
+        }        
       };
     }
   }
