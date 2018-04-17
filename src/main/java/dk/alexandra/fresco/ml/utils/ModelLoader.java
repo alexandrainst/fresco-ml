@@ -1,6 +1,5 @@
 package dk.alexandra.fresco.ml.utils;
 
-import dk.alexandra.fresco.decimal.RealNumericProvider;
 import dk.alexandra.fresco.lib.collections.Matrix;
 import dk.alexandra.fresco.ml.ActivationFunctions;
 import dk.alexandra.fresco.ml.FullyConnectedLayerParameters;
@@ -18,7 +17,7 @@ public class ModelLoader {
 
   private final int precision;
 
-  public ModelLoader(RealNumericProvider provider, int precision) {
+  public ModelLoader(int precision) {
     this.precision = precision;
   }
 

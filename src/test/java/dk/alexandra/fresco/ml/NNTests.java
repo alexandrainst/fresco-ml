@@ -1,9 +1,9 @@
 package dk.alexandra.fresco.ml;
 
-import dk.alexandra.fresco.decimal.RealNumeric;
-import dk.alexandra.fresco.decimal.RealNumericProvider;
-import dk.alexandra.fresco.decimal.SReal;
-import dk.alexandra.fresco.decimal.fixed.FixedNumeric;
+import dk.alexandra.fresco.lib.real.AdvancedRealNumeric;
+import dk.alexandra.fresco.lib.real.RealNumeric;
+import dk.alexandra.fresco.lib.real.SReal;
+import dk.alexandra.fresco.lib.real.fixed.FixedNumeric;
 import dk.alexandra.fresco.framework.Application;
 import dk.alexandra.fresco.framework.DRes;
 import dk.alexandra.fresco.framework.TestThreadRunner.TestThread;
@@ -28,7 +28,6 @@ import org.junit.Assert;
 
 public class NNTests {
 
-  private static RealNumericProvider defaultRealNumeric = scope -> new FixedNumeric(scope);
   private static int defaultPrecision = 4;
 
   public static class TestNN1layer<ResourcePoolT extends ResourcePool>
@@ -41,7 +40,7 @@ public class NNTests {
 
         @Override
         public void test() throws Exception {
-          ModelLoader loader = new ModelLoader(defaultRealNumeric, defaultPrecision);
+          ModelLoader loader = new ModelLoader(defaultPrecision);
 
           List<FullyConnectedLayerParameters<BigDecimal>> layers = Arrays.asList(
               loader.fullyConnectedLayerFromCsv(
@@ -71,15 +70,12 @@ public class NNTests {
           LinearAlgebraUtils utils = new LinearAlgebraUtils();
 
           Application<List<Matrix<BigDecimal>>, ProtocolBuilderNumeric> testApplication = root -> {
-            RealNumeric numeric = defaultRealNumeric.apply(root);
-
             List<DRes<Matrix<DRes<BigDecimal>>>> opened = new ArrayList<>();
             for (int i = 0; i < tests; i++) {
               DRes<Matrix<DRes<SReal>>> testVector =
-                  numeric.linalg().input(utils.createColumnVector(testVectors.getRow(i)), 1);
-              DRes<Matrix<DRes<SReal>>> out =
-                  root.seq(new NeuralNetwork(layers, testVector, defaultRealNumeric));
-              opened.add(numeric.linalg().open(out));
+                  root.realLinAlg().input(utils.createColumnVector(testVectors.getRow(i)), 1);
+              DRes<Matrix<DRes<SReal>>> out = root.seq(new NeuralNetwork(layers, testVector));
+              opened.add(root.realLinAlg().openMatrix(out));
             }
 
             return () -> opened.stream().map(l -> new MatrixUtils().unwrapMatrix(l))
@@ -106,7 +102,7 @@ public class NNTests {
 
         @Override
         public void test() throws Exception {
-          ModelLoader loader = new ModelLoader(defaultRealNumeric, defaultPrecision);
+          ModelLoader loader = new ModelLoader(defaultPrecision);
 
           List<FullyConnectedLayerParameters<BigDecimal>> layers = Arrays.asList(
               loader.fullyConnectedLayerFromCsv(
@@ -142,15 +138,13 @@ public class NNTests {
           LinearAlgebraUtils utils = new LinearAlgebraUtils();
 
           Application<List<Matrix<BigDecimal>>, ProtocolBuilderNumeric> testApplication = root -> {
-            RealNumeric numeric = defaultRealNumeric.apply(root);
-
             List<DRes<Matrix<DRes<BigDecimal>>>> opened = new ArrayList<>();
             for (int i = 0; i < tests; i++) {
               DRes<Matrix<DRes<SReal>>> testVector =
-                  numeric.linalg().input(utils.createColumnVector(testVectors.getRow(i)), 1);
+                  root.realLinAlg().input(utils.createColumnVector(testVectors.getRow(i)), 1);
               DRes<Matrix<DRes<SReal>>> out =
-                  root.seq(new NeuralNetwork(layers, testVector, defaultRealNumeric));
-              opened.add(numeric.linalg().open(out));
+                  root.seq(new NeuralNetwork(layers, testVector));
+              opened.add(root.realLinAlg().openMatrix(out));
             }
 
             return () -> opened.stream().map(l -> new MatrixUtils().unwrapMatrix(l))
@@ -166,7 +160,7 @@ public class NNTests {
             }
           }
           Assert.assertEquals(correct, tests);
-        }        
+        }
       };
     }
   }
@@ -182,7 +176,7 @@ public class NNTests {
 
         @Override
         public void test() throws Exception {
-          ModelLoader loader = new ModelLoader(defaultRealNumeric, defaultPrecision);
+          ModelLoader loader = new ModelLoader(defaultPrecision);
 
           Matrix<BigDecimal> b00 = loader.matrixFromCsv(
               new File(getClass().getClassLoader().getResource("mnist/2-layer/0b.csv").getFile()));
@@ -225,81 +219,75 @@ public class NNTests {
 
           Application<List<Matrix<BigDecimal>>, ProtocolBuilderNumeric> testApplication =
               root -> root.seq(r1 -> {
-                RealNumeric numeric = defaultRealNumeric.apply(r1);
-
                 List<DRes<Matrix<DRes<BigDecimal>>>> opened = new ArrayList<>();
 
-                DRes<Matrix<DRes<SReal>>> weights00 = numeric.linalg().input(w00, 1);
-                DRes<Matrix<DRes<SReal>>> weights01 = numeric.linalg().input(w01, 2);
+                DRes<Matrix<DRes<SReal>>> weights00 = r1.realLinAlg().input(w00, 1);
+                DRes<Matrix<DRes<SReal>>> weights01 = r1.realLinAlg().input(w01, 2);
 
-                DRes<Matrix<DRes<SReal>>> weights10 = numeric.linalg().input(w10, 1);
-                DRes<Matrix<DRes<SReal>>> weights11 = numeric.linalg().input(w11, 2);
+                DRes<Matrix<DRes<SReal>>> weights10 = r1.realLinAlg().input(w10, 1);
+                DRes<Matrix<DRes<SReal>>> weights11 = r1.realLinAlg().input(w11, 2);
 
-                DRes<Matrix<DRes<SReal>>> weights20 = numeric.linalg().input(w20, 1);
-                DRes<Matrix<DRes<SReal>>> weights21 = numeric.linalg().input(w21, 2);
+                DRes<Matrix<DRes<SReal>>> weights20 = r1.realLinAlg().input(w20, 1);
+                DRes<Matrix<DRes<SReal>>> weights21 = r1.realLinAlg().input(w21, 2);
 
-                DRes<Matrix<DRes<SReal>>> bias00 = numeric.linalg().input(b00, 1);
-                DRes<Matrix<DRes<SReal>>> bias01 = numeric.linalg().input(b01, 2);
+                DRes<Matrix<DRes<SReal>>> bias00 = r1.realLinAlg().input(b00, 1);
+                DRes<Matrix<DRes<SReal>>> bias01 = r1.realLinAlg().input(b01, 2);
 
-                DRes<Matrix<DRes<SReal>>> bias10 = numeric.linalg().input(b10, 1);
-                DRes<Matrix<DRes<SReal>>> bias11 = numeric.linalg().input(b11, 2);
+                DRes<Matrix<DRes<SReal>>> bias10 = r1.realLinAlg().input(b10, 1);
+                DRes<Matrix<DRes<SReal>>> bias11 = r1.realLinAlg().input(b11, 2);
 
-                DRes<Matrix<DRes<SReal>>> bias20 = numeric.linalg().input(b20, 1);
-                DRes<Matrix<DRes<SReal>>> bias21 = numeric.linalg().input(b21, 2);
+                DRes<Matrix<DRes<SReal>>> bias20 = r1.realLinAlg().input(b20, 1);
+                DRes<Matrix<DRes<SReal>>> bias21 = r1.realLinAlg().input(b21, 2);
 
                 // TODO: If there are enough matrices, we should do this via inner products instead
                 DRes<Matrix<DRes<SReal>>> w0 =
-                    numeric.linalg().add(numeric.linalg().scale(BigDecimal.valueOf(0.4), weights00),
-                        numeric.linalg().scale(BigDecimal.valueOf(0.6), weights01));
+                    r1.realLinAlg().add(r1.realLinAlg().scale(BigDecimal.valueOf(0.4), weights00),
+                        r1.realLinAlg().scale(BigDecimal.valueOf(0.6), weights01));
                 DRes<Matrix<DRes<SReal>>> w1 =
-                    numeric.linalg().add(numeric.linalg().scale(BigDecimal.valueOf(0.4), weights10),
-                        numeric.linalg().scale(BigDecimal.valueOf(0.6), weights11));
+                    r1.realLinAlg().add(r1.realLinAlg().scale(BigDecimal.valueOf(0.4), weights10),
+                        r1.realLinAlg().scale(BigDecimal.valueOf(0.6), weights11));
                 DRes<Matrix<DRes<SReal>>> w2 =
-                    numeric.linalg().add(numeric.linalg().scale(BigDecimal.valueOf(0.4), weights20),
-                        numeric.linalg().scale(BigDecimal.valueOf(0.6), weights21));
+                    r1.realLinAlg().add(r1.realLinAlg().scale(BigDecimal.valueOf(0.4), weights20),
+                        r1.realLinAlg().scale(BigDecimal.valueOf(0.6), weights21));
 
                 DRes<Matrix<DRes<SReal>>> b0 =
-                    numeric.linalg().add(numeric.linalg().scale(BigDecimal.valueOf(0.4), bias00),
-                        numeric.linalg().scale(BigDecimal.valueOf(0.6), bias01));
+                    r1.realLinAlg().add(r1.realLinAlg().scale(BigDecimal.valueOf(0.4), bias00),
+                        r1.realLinAlg().scale(BigDecimal.valueOf(0.6), bias01));
                 DRes<Matrix<DRes<SReal>>> b1 =
-                    numeric.linalg().add(numeric.linalg().scale(BigDecimal.valueOf(0.4), bias10),
-                        numeric.linalg().scale(BigDecimal.valueOf(0.6), bias11));
+                    r1.realLinAlg().add(r1.realLinAlg().scale(BigDecimal.valueOf(0.4), bias10),
+                        r1.realLinAlg().scale(BigDecimal.valueOf(0.6), bias11));
                 DRes<Matrix<DRes<SReal>>> b2 =
-                    numeric.linalg().add(numeric.linalg().scale(BigDecimal.valueOf(0.4), bias20),
-                        numeric.linalg().scale(BigDecimal.valueOf(0.6), bias21));
+                    r1.realLinAlg().add(r1.realLinAlg().scale(BigDecimal.valueOf(0.4), bias20),
+                        r1.realLinAlg().scale(BigDecimal.valueOf(0.6), bias21));
 
-                opened.add(numeric.linalg().open(w0));
-                opened.add(numeric.linalg().open(w1));
-                opened.add(numeric.linalg().open(w2));
-                opened.add(numeric.linalg().open(b0));
-                opened.add(numeric.linalg().open(b1));
-                opened.add(numeric.linalg().open(b2));
+                opened.add(r1.realLinAlg().openMatrix(w0));
+                opened.add(r1.realLinAlg().openMatrix(w1));
+                opened.add(r1.realLinAlg().openMatrix(w2));
+                opened.add(r1.realLinAlg().openMatrix(b0));
+                opened.add(r1.realLinAlg().openMatrix(b1));
+                opened.add(r1.realLinAlg().openMatrix(b2));
 
                 return () -> opened.stream().map(x -> new MatrixUtils().unwrapMatrix(x))
                     .collect(Collectors.toList());
               }).seq((r2, l) -> {
-
-                RealNumeric numeric = defaultRealNumeric.apply(r2);
-
                 List<DRes<Matrix<DRes<BigDecimal>>>> opened = new ArrayList<>();
 
                 for (int i = 0; i < tests; i++) {
                   DRes<Matrix<DRes<SReal>>> testVector =
-                      numeric.linalg().input(utils.createColumnVector(testVectors.getRow(i)), 1);
+                      r2.realLinAlg().input(utils.createColumnVector(testVectors.getRow(i)), 1);
 
                   DRes<Matrix<DRes<SReal>>> out =
-                      r2.seq(
-                          new NeuralNetwork(
-                              Arrays.asList(
-                                  new FullyConnectedLayerParameters<>(l.get(0), l.get(3),
-                                      ActivationFunctions.Type.RELU),
-                                  new FullyConnectedLayerParameters<>(l.get(1), l.get(4),
-                                      ActivationFunctions.Type.RELU),
-                                  new FullyConnectedLayerParameters<>(l.get(2), l.get(5),
-                                      ActivationFunctions.Type.SOFTMAX)),
-                              testVector, defaultRealNumeric));
+                      r2.seq(new NeuralNetwork(
+                          Arrays.asList(
+                              new FullyConnectedLayerParameters<>(l.get(0), l.get(3),
+                                  ActivationFunctions.Type.RELU),
+                              new FullyConnectedLayerParameters<>(l.get(1), l.get(4),
+                                  ActivationFunctions.Type.RELU),
+                              new FullyConnectedLayerParameters<>(l.get(2), l.get(5),
+                                  ActivationFunctions.Type.SOFTMAX)),
+                          testVector));
 
-                  opened.add(numeric.linalg().open(out));
+                  opened.add(r2.realLinAlg().openMatrix(out));
                 }
 
                 return () -> opened.stream().map(x -> new MatrixUtils().unwrapMatrix(x))

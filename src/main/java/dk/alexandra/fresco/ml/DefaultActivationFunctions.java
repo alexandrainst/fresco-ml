@@ -1,8 +1,8 @@
 package dk.alexandra.fresco.ml;
 
-import dk.alexandra.fresco.decimal.RealNumeric;
-import dk.alexandra.fresco.decimal.RealNumericProvider;
-import dk.alexandra.fresco.decimal.SReal;
+import dk.alexandra.fresco.lib.real.AdvancedRealNumeric;
+import dk.alexandra.fresco.lib.real.RealNumeric;
+import dk.alexandra.fresco.lib.real.SReal;
 import dk.alexandra.fresco.framework.DRes;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.util.Pair;
@@ -18,39 +18,32 @@ import java.util.stream.Collectors;
 public class DefaultActivationFunctions implements ActivationFunctions {
 
   private ProtocolBuilderNumeric builder;
-  private RealNumericProvider provider;
 
-  public DefaultActivationFunctions(ProtocolBuilderNumeric builder, RealNumericProvider provider) {
+  public DefaultActivationFunctions(ProtocolBuilderNumeric builder) {
     this.builder = builder;
-    this.provider = provider;
   }
 
   @Override
   public DRes<Matrix<DRes<SReal>>> activation(Type type, Matrix<DRes<SReal>> v) {
-
     switch (type) {
       case RELU:
         return relu(v);
-
       case SIGMOID:
         return sigmoid(v);
-
       case IDENTITY:
         return identity(v);
-
       case SOFTMAX:
         return softmax(v);
+      default:
+        throw new IllegalArgumentException("Unsupported activation function type, " + type);
     }
-
-    throw new IllegalArgumentException("Unsupported activation function type, " + type);
   }
 
   private BiFunction<ProtocolBuilderNumeric, DRes<SReal>, DRes<SReal>> ebeRelu() {
     return (builder, x) -> {
       return builder.seq(r1 -> {
-        RealNumeric numeric = provider.apply(r1);
-        DRes<SInt> compare = numeric.numeric().leq(numeric.numeric().known(BigDecimal.ZERO), x);
-        return numeric.numeric().mult(x, numeric.numeric().fromSInt(compare));
+        DRes<SInt> compare = r1.realNumeric().leq(r1.realNumeric().known(BigDecimal.ZERO), x);
+        return r1.realNumeric().mult(x, r1.realNumeric().fromSInt(compare));
       });
     };
   }
@@ -63,18 +56,16 @@ public class DefaultActivationFunctions implements ActivationFunctions {
   @Override
   public DRes<Matrix<DRes<SReal>>> softmax(Matrix<DRes<SReal>> v) {
     return builder.par(r1 -> {
-      RealNumeric numeric = provider.apply(r1);
+      AdvancedRealNumeric advanced = r1.realAdvanced();
       List<DRes<SReal>> exps =
-          v.getColumn(0).stream().map(e -> numeric.advanced().exp(e)).collect(Collectors.toList());
+          v.getColumn(0).stream().map(e -> advanced.exp(e)).collect(Collectors.toList());
       return () -> exps;
     }).seq((r2, l) -> {
-      RealNumeric numeric = provider.apply(r2);
-      DRes<SReal> sum = numeric.advanced().sum(l);
+      DRes<SReal> sum = r2.realAdvanced().sum(l);
       return () -> new Pair<>(l, sum);
     }).par((r3, p) -> {
-      RealNumeric numeric = provider.apply(r3);
       Matrix<DRes<SReal>> vector = new LinearAlgebraUtils().createColumnVector(p.getFirst().stream()
-          .map(e -> numeric.numeric().div(e, p.getSecond())).collect(Collectors.toList()));
+          .map(e -> r3.realNumeric().div(e, p.getSecond())).collect(Collectors.toList()));
       return () -> vector;
     });
   }
@@ -92,16 +83,15 @@ public class DefaultActivationFunctions implements ActivationFunctions {
   private BiFunction<ProtocolBuilderNumeric, DRes<SReal>, DRes<SReal>> ebeSigmoid() {
     return (builder, x) -> {
       return builder.seq(r1 -> {
-        RealNumeric numeric = provider.apply(r1);
-        DRes<SReal> exp = numeric.advanced().exp(x);
-        return numeric.numeric().div(exp, numeric.numeric().add(BigDecimal.ONE, exp));
+        DRes<SReal> exp = r1.realAdvanced().exp(x);
+        return r1.realNumeric().div(exp, r1.realNumeric().add(BigDecimal.ONE, exp));
       });
     };
   }
 
   /**
    * Apply the given map to all elements in the given matrix.
-   * 
+   *
    * @param m
    * @param map
    * @return
