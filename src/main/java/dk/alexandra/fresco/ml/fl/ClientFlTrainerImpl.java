@@ -1,6 +1,5 @@
 package dk.alexandra.fresco.ml.fl;
 
-import dk.alexandra.fresco.framework.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -8,36 +7,33 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 
-public class LocalFederatedTrainer implements FederatedTrainer {
+public class ClientFlTrainerImpl implements ClientFlTrainer {
 
-  private LocalFederatedTrainingServer server;
+  private final ClientFlProtocolHandler server;
+  private final MultiLayerNetwork model;
+  private final DataSetIterator trainingData;
+  private final int epochs;
 
-  public LocalFederatedTrainer(LocalFederatedTrainingServer server) {
+  public ClientFlTrainerImpl(MultiLayerNetwork model, DataSetIterator trainingData, int epochs,
+      ClientFlProtocolHandler server) {
+    this.model = model;
+    this.trainingData = trainingData;
     this.server = server;
+    this.epochs = epochs;
   }
 
   @Override
-  public void fit(MultiLayerNetwork model, DataSetIterator trainingData) {
-    model.fit(trainingData);
+  public void fitLocalModel() {
+    trainingData.reset();
+    for (int i = 0; i < epochs; i++) {
+      model.fit(trainingData);
+    }
     List<INDArray> weights = extractWeigths(model);
     List<INDArray> biases = extractBiases(model);
     int examples = trainingData.numExamples();
     weights = weights.stream().map(w -> w.mul(examples)).collect(Collectors.toList());
     biases = biases.stream().map(b -> b.mul(examples)).collect(Collectors.toList());
-    Pair<List<INDArray>, List<INDArray>> globalModel =
-        server.nextRound().addLocalModel(weights, biases, examples).getGobalModel();
-    updateModel(model, globalModel);
-  }
-
-  private void updateModel(MultiLayerNetwork model,
-      Pair<List<INDArray>, List<INDArray>> globalModel) {
-    int numLayers = model.getnLayers();
-    List<INDArray> weights = globalModel.getFirst();
-    List<INDArray> biases = globalModel.getSecond();
-    for (int i = 0; i < numLayers; i++) {
-      model.setParam(i + "_W", weights.get(i));
-      model.setParam(i + "_b", biases.get(i));
-    }
+    server.submitLocalModel(new LocalModel(weights, biases, examples));
   }
 
   private List<INDArray> extractWeigths(MultiLayerNetwork model) {
@@ -56,6 +52,22 @@ public class LocalFederatedTrainer implements FederatedTrainer {
       biases.add(model.paramTable().get(i + "_b"));
     }
     return biases;
+  }
+
+  @Override
+  public void updateGlobalModel() {
+    LocalModel globalModel = server.getGlobalModel();
+    int numLayers = model.getnLayers();
+    model.getLayer(1).setParams(null);
+    for (int i = 0; i < numLayers; i++) {
+      model.setParam(i + "_W", globalModel.getWeights().get(i));
+      model.setParam(i + "_b", globalModel.getBiases().get(i));
+    }
+  }
+
+  @Override
+  public MultiLayerNetwork getModel() {
+    return model;
   }
 
 }

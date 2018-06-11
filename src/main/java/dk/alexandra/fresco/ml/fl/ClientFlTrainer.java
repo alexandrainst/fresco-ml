@@ -1,13 +1,16 @@
 package dk.alexandra.fresco.ml.fl;
 
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
-import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 
 /**
- * Interface for federated training
+ * Interface for federated training.
  */
-public interface FederatedTrainer {
+public interface ClientFlTrainer {
 
-  void fit(MultiLayerNetwork model, DataSetIterator trainingData);
+  void fitLocalModel();
+
+  void updateGlobalModel();
+
+  MultiLayerNetwork getModel();
 
 }
