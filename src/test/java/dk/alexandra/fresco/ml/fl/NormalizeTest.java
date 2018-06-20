@@ -29,12 +29,12 @@ public class NormalizeTest {
   @Test
   public void test() {
     // Setup
-    WeightedModelParams<BigInteger> openParams = FlTestUtils.createPlainParams(
+    WeightedModelParams<BigInteger> openParams = FlUtils.createPlainParams(
         BigInteger.valueOf(12), BigInteger.valueOf(1), BigInteger.valueOf(24),
         BigInteger.valueOf(2000), BigInteger.valueOf(-12));
     // Compute
     List<WeightedModelParams<SInt>> closedParams = setup.getSce()
-        .runApplication(FlTestUtils.closeModelParams(openParams), setup.getRp(), setup.getNet());
+        .runApplication(FlUtils.closeModelParams(openParams), setup.getRp(), setup.getNet());
     List<DRes<SInt>> closedResult = setup.getSce()
         .runApplication(builder -> builder.seq(new Normalize(closedParams.get(0))),
             setup.getRp(), setup.getNet());
@@ -45,7 +45,7 @@ public class NormalizeTest {
       return () -> res;
     }, setup.getRp(), setup.getNet());
     for (int i = 0; i < list.size(); i++) {
-      BigInteger[] fraction = FlTestUtils.gauss(list.get(i).out(), setup.getRp().getModulus());
+      BigInteger[] fraction = FlUtils.gauss(list.get(i).out(), setup.getRp().getModulus());
       double expected = openParams.getWeightedParams().get(i).out().doubleValue()
           / openParams.getWeight().out().doubleValue();
       assertEquals(expected, fraction[0].doubleValue() / fraction[1].doubleValue(), 0.000001);

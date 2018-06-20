@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * <li>Multiply all parameters by the inverse weight.
  * </ol>
  * This method requires the open parameters to translated into a rational number using, e.g., the
- * method {@link FlTestUtils#gauss(java.math.BigInteger, java.math.BigInteger)}
+ * method {@link FlUtils#gauss(java.math.BigInteger, java.math.BigInteger)}
  * </p>
  */
 class Normalize implements Computation<List<DRes<SInt>>, ProtocolBuilderNumeric> {

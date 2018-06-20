@@ -33,12 +33,12 @@ public class SumParamsTest {
   @Test
   public void test() {
     // Setup
-    WeightedModelParams<BigInteger> openParamA = FlTestUtils
+    WeightedModelParams<BigInteger> openParamA = FlUtils
         .createPlainParams(BigInteger.valueOf(10), BigInteger.valueOf(10), BigInteger.valueOf(30));
-    WeightedModelParams<BigInteger> openParamB = FlTestUtils
+    WeightedModelParams<BigInteger> openParamB = FlUtils
         .createPlainParams(BigInteger.valueOf(5), BigInteger.valueOf(5), BigInteger.valueOf(15));
     List<WeightedModelParams<SInt>> params = setup.getSce().runApplication(
-        FlTestUtils.closeModelParams(openParamA, openParamB), setup.getRp(), setup.getNet());
+        FlUtils.closeModelParams(openParamA, openParamB), setup.getRp(), setup.getNet());
 
     // Compute
     WeightedModelParams<SInt> output = setup.getSce().runApplication(builder -> builder

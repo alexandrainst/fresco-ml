@@ -48,12 +48,12 @@ public class SIntAveragerTest {
       for (int j = 0; j < numParams; j++) {
         params[j] = new BigInteger(paramBitLength, rand);
       }
-      weightedParams.add(FlTestUtils.createPlainParams(weight, params));
+      weightedParams.add(FlUtils.createPlainParams(weight, params));
     }
     // Do test
     Averager<SInt, ProtocolBuilderNumeric> service = new SIntAverager<>();
     List<WeightedModelParams<SInt>> closedParams = setup.getSce().runApplication(
-        FlTestUtils.closeModelParams(weightedParams), setup.getRp(), setup.getNet());
+        FlUtils.closeModelParams(weightedParams), setup.getRp(), setup.getNet());
     List<DRes<SInt>> closedAverage = setup.getSce().runApplication(builder -> {
       for (WeightedModelParams<SInt> w : closedParams) {
         builder.seq(service.addToAverage(w));
@@ -67,7 +67,7 @@ public class SIntAveragerTest {
           .collect(Collectors.toList());
       return () -> result.stream()
           .map(DRes::out)
-          .map(p -> FlTestUtils.gauss(p, setup.getRp().getModulus()))
+          .map(p -> FlUtils.gauss(p, setup.getRp().getModulus()))
           .map(f -> f[0].doubleValue() / f[1].doubleValue())
           .collect(Collectors.toList());
     }, setup.getRp(), setup.getNet());
@@ -89,6 +89,6 @@ public class SIntAveragerTest {
             i -> new Pair<>(a.getWeightedParams().get(i).out(), b.getWeightedParams().get(i).out()))
         .map(p -> p.getFirst().add(p.getSecond())).collect(Collectors.toList());
     BigInteger weight = a.getWeight().out().add(b.getWeight().out());
-    return FlTestUtils.createPlainParams(weight, params);
+    return FlUtils.createPlainParams(weight, params);
   }
 }

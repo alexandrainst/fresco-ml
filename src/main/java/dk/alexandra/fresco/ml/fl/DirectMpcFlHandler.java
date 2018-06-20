@@ -170,7 +170,7 @@ public final class DirectMpcFlHandler<ResourcePoolT extends NumericResourcePool>
    * @return a representation of the model parameters for for further local training.
    */
   private FlatModel postProcessModel(List<BigInteger> average) {
-    double[] params = average.stream().map(p -> FlTestUtils.gauss(p, rp.getModulus()))
+    double[] params = average.stream().map(p -> FlUtils.gauss(p, rp.getModulus()))
         .mapToDouble(f -> f[0].divide(f[1]).doubleValue()).map(d -> d / DEFAULT_SCALE_UP).toArray();
     return new FlatModel(Nd4j.create(params), -1);
   }

@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Utility functions for the FL tests.
+ * Utility functions for FL.
  */
-class FlTestUtils {
+class FlUtils {
 
 
-  private FlTestUtils() {
+  private FlUtils() {
     // Do not instantiate
   }
 
@@ -32,7 +32,7 @@ class FlTestUtils {
   }
 
   static <T> List<DRes<T>> dressify(List<T> list) {
-    return list.stream().map(FlTestUtils::dressify).collect(Collectors.toList());
+    return list.stream().map(FlUtils::dressify).collect(Collectors.toList());
   }
 
   static <T> DRes<T> dressify(T e) {
