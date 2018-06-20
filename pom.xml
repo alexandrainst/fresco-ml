@@ -75,7 +75,6 @@
 					<target>1.8</target>
           <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>
-          <executable>/Library/Java/JavaVirtualMachines/jdk1.8.0_131.jdk/Contents/Home/bin/javac</executable>
 				</configuration>
 			</plugin>
 		</plugins>
