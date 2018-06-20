@@ -3,6 +3,7 @@ package dk.alexandra.fresco.ml.fl;
 import static org.junit.Assert.assertEquals;
 
 import dk.alexandra.fresco.framework.DRes;
+import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.framework.value.SInt;
 import java.math.BigInteger;
@@ -15,7 +16,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class SIntAveragingServiceTest {
+/**
+ * Functional tests of the SIntAverager.
+ */
+public class SIntAveragerTest {
 
   SinglePartyTestSetup setup;
 
@@ -33,7 +37,7 @@ public class SIntAveragingServiceTest {
   public void test() {
     // Setup test
     final int numModels = 8;
-    final int numParams = 10000;
+    final int numParams = 5;
     final int weightBitLength = 12;
     final int paramBitLength = 12;
     List<WeightedModelParams<BigInteger>> weightedParams = new ArrayList<>(numModels);
@@ -47,14 +51,15 @@ public class SIntAveragingServiceTest {
       weightedParams.add(FlTestUtils.createPlainParams(weight, params));
     }
     // Do test
-    AveragingService<SInt> service = new SIntAveragingService<>(setup.getSce(), setup.getNet(),
-        setup.getRp());
+    Averager<SInt, ProtocolBuilderNumeric> service = new SIntAverager<>();
     List<WeightedModelParams<SInt>> closedParams = setup.getSce().runApplication(
         FlTestUtils.closeModelParams(weightedParams), setup.getRp(), setup.getNet());
-    for (WeightedModelParams<SInt> w : closedParams) {
-      service.addToAverage(w);
-    }
-    List<DRes<SInt>> closedAverage = service.getAveragedParams();
+    List<DRes<SInt>> closedAverage = setup.getSce().runApplication(builder -> {
+      for (WeightedModelParams<SInt> w : closedParams) {
+        builder.seq(service.addToAverage(w));
+      }
+      return builder.seq(service.getAveragedParams());
+    }, setup.getRp(), setup.getNet());
     // Test results
     List<Double> actualAverage = setup.getSce().runApplication(builder -> {
       List<DRes<BigInteger>> result = closedAverage.stream()

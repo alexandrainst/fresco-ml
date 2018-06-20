@@ -10,6 +10,7 @@ import java.util.Deque;
  * Useful for testing with the dummy protocol suite.
  */
 public final class SinglePartyTestNetwork implements CloseableNetwork {
+
   Deque<byte[]> queue = new ArrayDeque<>();
 
   @Override

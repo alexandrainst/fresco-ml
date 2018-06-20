@@ -11,6 +11,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Utility functions for the FL tests.
+ */
 class FlTestUtils {
 
 

@@ -3,6 +3,11 @@ package dk.alexandra.fresco.ml.fl;
 import dk.alexandra.fresco.framework.DRes;
 import java.util.List;
 
+/**
+ * A generic implementation of the WeightedModelParams interface.
+ *
+ * @param <T> the value type for the parameters
+ */
 public class WeightedModelParamsImpl<T> implements WeightedModelParams<T> {
 
   private final DRes<T> weight;
@@ -21,18 +26,6 @@ public class WeightedModelParamsImpl<T> implements WeightedModelParams<T> {
   @Override
   public List<DRes<T>> getWeightedParams() {
     return weightedParams;
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("(weight=").append(weight.out()).append(", params=");
-    for (DRes<T> p : weightedParams) {
-      sb.append(p.out()).append(",");
-    }
-    sb.deleteCharAt(sb.lastIndexOf(","));
-    sb.append(")");
-    return sb.toString();
   }
 
 }

@@ -36,7 +36,8 @@ public class NormalizeTest {
     List<WeightedModelParams<SInt>> closedParams = setup.getSce()
         .runApplication(FlTestUtils.closeModelParams(openParams), setup.getRp(), setup.getNet());
     List<DRes<SInt>> closedResult = setup.getSce()
-        .runApplication(new Normalize(closedParams.get(0)), setup.getRp(), setup.getNet());
+        .runApplication(builder -> builder.seq(new Normalize(closedParams.get(0))),
+            setup.getRp(), setup.getNet());
     // Test results
     List<DRes<BigInteger>> list = setup.getSce().runApplication(builder -> {
       List<DRes<BigInteger>> res = closedResult.stream().map(r -> builder.numeric().open(r))

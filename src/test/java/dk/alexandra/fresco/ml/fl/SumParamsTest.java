@@ -3,8 +3,10 @@ package dk.alexandra.fresco.ml.fl;
 import static org.junit.Assert.assertEquals;
 
 import dk.alexandra.fresco.framework.DRes;
+import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.framework.value.SInt;
+import dk.alexandra.fresco.suite.dummy.arithmetic.DummyArithmeticResourcePool;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
@@ -16,7 +18,7 @@ import org.junit.Test;
 
 public class SumParamsTest {
 
-  SinglePartyTestSetup setup;
+  TestSetup<DummyArithmeticResourcePool, ProtocolBuilderNumeric> setup;
 
   @Before
   public void setUp() {
@@ -39,8 +41,8 @@ public class SumParamsTest {
         FlTestUtils.closeModelParams(openParamA, openParamB), setup.getRp(), setup.getNet());
 
     // Compute
-    WeightedModelParams<SInt> output = setup.getSce()
-        .runApplication(new SumParams(params.get(0), params.get(1)), setup.getRp(), setup.getNet());
+    WeightedModelParams<SInt> output = setup.getSce().runApplication(builder -> builder
+        .seq(new SumParams(params.get(0), params.get(1))), setup.getRp(), setup.getNet());
 
     // Test results
     Pair<DRes<BigInteger>, DRes<List<DRes<BigInteger>>>> result = setup.getSce()

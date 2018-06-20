@@ -2,32 +2,53 @@ package dk.alexandra.fresco.ml.fl;
 
 import dk.alexandra.fresco.framework.Application;
 import dk.alexandra.fresco.framework.DRes;
+import dk.alexandra.fresco.framework.builder.Computation;
 import dk.alexandra.fresco.framework.builder.numeric.NumericResourcePool;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.network.Network;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngine;
+import dk.alexandra.fresco.framework.util.ExceptionConverter;
 import dk.alexandra.fresco.framework.value.SInt;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-public class DirectMpcFlHandler<ResourcePoolT extends NumericResourcePool>
-    implements ClientFlProtocolHandler, ServerFlProtocolHandler {
+/**
+ * A simple implementation of Federated Learning where clients directly implement the averaging
+ * server using MPC (as opposed to an outsourcing model where clients and parties impl).
+ *
+ * <p>
+ * This assumes that each party will submit exactly one locally trained model for an externally
+ * specified number of rounds. This does not implement any further coordination of averaging rounds
+ * (i.e., does not do timeouts, handling missing inputs and so on).
+ * </p>
+ *
+ * @param <ResourcePoolT>
+ *          the resource pool type used
+ */
+public final class DirectMpcFlHandler<ResourcePoolT extends NumericResourcePool>
+    implements ClientFlHandler, ServerFlHandler {
 
-  private static final int DEFAULT_SCALE_UP = 10000;
+  private static final int DEFAULT_SCALE_UP = 1000_000_000;
   private final SecureComputationEngine<ResourcePoolT, ProtocolBuilderNumeric> sce;
   private final ResourcePoolT rp;
   private final Network network;
-  private LocalModel globalModel;
+  private Future<FlatModel> modelFuture;
 
-  public DirectMpcFlHandler(SecureComputationEngine<ResourcePoolT,
-      ProtocolBuilderNumeric> sce,
+  /**
+   * Constructs the handler for MPC based Federated Learning.
+   *
+   * @param sce
+   *          the engine to run the MPC computations on
+   * @param rp
+   *          the resource pool for the computation
+   * @param network
+   *          the network to communicate over
+   */
+  public DirectMpcFlHandler(SecureComputationEngine<ResourcePoolT, ProtocolBuilderNumeric> sce,
       ResourcePoolT rp, Network network) {
     this.sce = sce;
     this.rp = rp;
@@ -35,99 +56,123 @@ public class DirectMpcFlHandler<ResourcePoolT extends NumericResourcePool>
   }
 
   @Override
-  public LocalModel getGlobalModel() {
-    return globalModel;
+  public FlatModel getAveragedModel() {
+    return ExceptionConverter.safe(() -> modelFuture.get(),
+        "Error occured while computing the averaged model");
   }
 
   @Override
-  public void submitLocalModel(LocalModel model) {
-    List<BigInteger> params = prepareForInput(model); // Client side
-    AveragingService<SInt> service = new SIntAveragingService<>(sce, network, rp);
-    for (int i = 1; i <= rp.getNoOfParties(); i++) {
-      WeightedModelParams<SInt> weightedParams;
-      if (i == rp.getMyId()) {
-        BigInteger examples = BigInteger.valueOf(model.getExamples());
-        weightedParams = inputMyParams(params, examples);// Client-Server protocol side
-      } else {
-        weightedParams = inputOtherParams(params.size(), i); // Client-Server (other server) side
-      }
-      service.addToAverage(weightedParams); // Server side
-    }
-    List<SInt> closedAverage = service.getAveragedParams().stream()
-        .map(DRes::out)
-        .collect(Collectors.toList());
-    List<BigInteger> average = openAverage(closedAverage); // Client-Server protocol
-    List<int[]> weightShapes = model.getWeights().stream().map(INDArray::shape)
-        .collect(Collectors.toList());
-    List<int[]> biasesShapes = model.getBiases().stream().map(INDArray::shape)
-        .collect(Collectors.toList());
-    globalModel = postProcessModel(average, weightShapes, biasesShapes);
+  public void submitLocalModel(FlatModel model) {
+    modelFuture = this.sce.startApplication(processModel(model), this.rp, this.network);
   }
 
-  private LocalModel postProcessModel(List<BigInteger> average,
-      List<int[]> weightShapes,
-      List<int[]> biasShapes) {
-    double[] params = average.stream()
-        .map(p -> FlTestUtils.gauss(p, rp.getModulus()))
-        .mapToDouble(f -> f[0].doubleValue() / f[1].doubleValue())
-        .map(d -> d / DEFAULT_SCALE_UP)
-        .toArray();
-    List<INDArray> weights = new ArrayList<>(weightShapes.size());
-    int offset = 0;
-    for (int[] shape: weightShapes) {
-      int size = IntStream.of(shape).sum();
-      weights.add(Nd4j.create(params, shape, offset));
-      offset += size;
-    }
-    List<INDArray> biases = new ArrayList<>(biasShapes.size());
-    for (int[] shape: biasShapes) {
-      int size = IntStream.of(shape).sum();
-      biases.add(Nd4j.create(params, shape, offset));
-      offset += size;
-    }
-    return new LocalModel(weights, biases, -1);
+  /**
+   * Constructs an MPC Application to process a submitted locally trained model.
+   *
+   * <p>
+   * This will take as input a locally trained model from each party and add it to a running
+   * average.
+   * </p>
+   *
+   * @param model
+   *          the locally trained model of this party
+   * @return an MPC Application to compute the average of all parties local models.
+   */
+  private Application<FlatModel, ProtocolBuilderNumeric> processModel(final FlatModel model) {
+    return builder -> {
+      Averager<SInt, ProtocolBuilderNumeric> averager = new SIntAverager<>();
+      final int numParams = model.getParams().length();
+      DRes<FlatModel> m = builder.seq(s -> () -> 1)
+          .whileLoop(index -> index < rp.getNoOfParties() + 1, (whileBuilder, index) -> {
+            if (index == rp.getMyId()) {
+              List<BigInteger> params = prepareForInput(model);
+              BigInteger examples = BigInteger.valueOf(model.getExamples());
+              whileBuilder.seq(inputMyParams(params, examples))
+                  .seq((seq, closedParams) -> seq.seq(averager.addToAverage(closedParams)));
+            } else {
+              whileBuilder.seq(inputOtherParams(numParams, index))
+                  .seq((seq, closedParams) -> seq.seq(averager.addToAverage(closedParams)));
+            }
+            return () -> index + 1;
+          }).seq((seq, index) -> seq.seq(averager.getAveragedParams()))
+          .seq((seq, closedAverage) -> seq.seq(openAverage(closedAverage)))
+          .seq((seq, openAverage) -> () -> postProcessModel(
+              openAverage.stream().map(DRes::out).collect(Collectors.toList())));
+      return m;
+    };
   }
 
-  private <OutputT> OutputT run(Application<OutputT, ProtocolBuilderNumeric> app) {
-    return sce.runApplication(app, rp, network);
+  private Computation<List<DRes<BigInteger>>, ProtocolBuilderNumeric> openAverage(
+      List<DRes<SInt>> params) {
+    return builder -> builder.collections().openList(() -> params);
   }
 
-  private List<BigInteger> openAverage(List<SInt> closedAverage) {
-    return run(builder -> {
-      return builder.collections().openList(() -> closedAverage);
-    }).stream().map(DRes::out).collect(Collectors.toList());
-  }
-
-  private WeightedModelParams<SInt> inputOtherParams(int size, final int id) {
-    WeightedModelParams<SInt> weightedParams;
-    weightedParams = run(builder -> builder.par(parBuilder -> {
+  private Computation<WeightedModelParams<SInt>, ProtocolBuilderNumeric> inputOtherParams(int size,
+      final int id) {
+    return builder -> builder.par(parBuilder -> {
       DRes<List<DRes<SInt>>> closedPars = parBuilder.collections().closeList(size, id);
       DRes<SInt> closedWeight = parBuilder.numeric().input(null, id);
       return () -> new WeightedModelParamsImpl<>(closedWeight, closedPars.out());
-    }));
-    return weightedParams;
+    });
   }
 
-  private WeightedModelParams<SInt> inputMyParams(List<BigInteger> params, BigInteger examples) {
-    WeightedModelParams<SInt> weightedParams;
-    weightedParams = run(builder -> builder.par(parBuilder -> {
-      DRes<List<DRes<SInt>>> closedParams = parBuilder.collections()
-          .closeList(params, rp.getMyId());
+  private Computation<WeightedModelParams<SInt>, ProtocolBuilderNumeric> inputMyParams(
+      List<BigInteger> params, BigInteger examples) {
+    return builder -> builder.par(parBuilder -> {
+      DRes<List<DRes<SInt>>> closedParams = parBuilder.collections().closeList(params,
+          rp.getMyId());
       DRes<SInt> closedWeight = parBuilder.numeric().input(examples, rp.getMyId());
       return () -> new WeightedModelParamsImpl<>(closedWeight, closedParams.out());
-    }));
-    return weightedParams;
+    });
   }
 
-  private List<BigInteger> prepareForInput(LocalModel model) {
-    List<BigInteger> params = Stream.concat(model.getWeights().stream(), model.getBiases().stream())
-        .map(w -> w.mul(model.getExamples() * DEFAULT_SCALE_UP))
-        .map(INDArray::toIntVector)
-        .map(Arrays::stream)
-        .flatMap(IntStream::boxed)
-        .map(BigInteger::valueOf)
+  /**
+   * Converts locally trained model parameters to a representation that we can input to the MPC
+   * computation.
+   *
+   * <p>
+   * This works as follows:
+   * <ol>
+   * <li>We scale the parameters by the by the weight of the model (i.e., the number of examples it
+   * was trained on). This is to save us having to do this multiplication in MPC.
+   * <li>We scale up the floating point representation of the model parameters by a factor
+   * {@link DirectMpcFlHandler#DEFAULT_SCALE_UP}.
+   * <li>We truncate this value to an integer (BigInteger).
+   * </ol>
+   * </p>
+   *
+   * @param model
+   *          the locally trained model parameters
+   * @return a representation of the model parameters fit for MPC
+   */
+  private List<BigInteger> prepareForInput(FlatModel model) {
+    double[] doubleParams = model.getParams().mul(model.getExamples()).mul(DEFAULT_SCALE_UP)
+        .toDoubleVector();
+    if (Arrays.stream(doubleParams).anyMatch(d -> d > Long.MAX_VALUE)) {
+      throw new IllegalStateException();
+    }
+    return Arrays.stream(doubleParams).mapToLong(d -> (long) d).mapToObj(BigInteger::valueOf)
         .collect(Collectors.toList());
-    return params;
+  }
+
+  /**
+   * Converts the representation of model parameters used in MPC back into one that can be used for
+   * local training.
+   *
+   * <p>
+   * Essentially, this reverses what we do in {@link DirectMpcFlHandler#prepareForInput(FlatModel)}.
+   * However, here we also apply rational reconstruction in order go from a field element to a
+   * double value.
+   * </p>
+   *
+   * @param average
+   *          a list of averaged model parameters output from the MPC computation
+   * @return a representation of the model parameters for for further local training.
+   */
+  private FlatModel postProcessModel(List<BigInteger> average) {
+    double[] params = average.stream().map(p -> FlTestUtils.gauss(p, rp.getModulus()))
+        .mapToDouble(f -> f[0].divide(f[1]).doubleValue()).map(d -> d / DEFAULT_SCALE_UP).toArray();
+    return new FlatModel(Nd4j.create(params), -1);
   }
 
 }

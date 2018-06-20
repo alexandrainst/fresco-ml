@@ -1,14 +1,17 @@
 package dk.alexandra.fresco.ml.fl;
 
-import dk.alexandra.fresco.framework.Application;
 import dk.alexandra.fresco.framework.DRes;
+import dk.alexandra.fresco.framework.builder.Computation;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.value.SInt;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-class SumParams implements Application<WeightedModelParams<SInt>, ProtocolBuilderNumeric> {
+/**
+ * An MPC computation to sum two sets of weighted model parameters.
+ */
+class SumParams implements Computation<WeightedModelParams<SInt>, ProtocolBuilderNumeric> {
 
   private final WeightedModelParams<SInt> right;
   private final WeightedModelParams<SInt> left;
