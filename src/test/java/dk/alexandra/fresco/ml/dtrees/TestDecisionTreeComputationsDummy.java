@@ -10,4 +10,9 @@ public class TestDecisionTreeComputationsDummy extends AbstractDummyArithmeticTe
     runTest(new DecisionTreeComputationTests.TestInputDecisionTree<>(), new TestParameters().numParties(2));
   }
 
+  @Test
+  public void testEvaluateDecisionTree() {
+    runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTree<>(), new TestParameters().numParties(2));
+  }
+
 }
