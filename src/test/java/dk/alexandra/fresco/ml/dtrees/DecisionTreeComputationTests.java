@@ -63,7 +63,7 @@ public class DecisionTreeComputationTests {
           DecisionTreeModel treeModel = ExceptionConverter
               .safe(() -> loader.modelFromFile(loader.getFile("dtrees/models/test-model-1.csv")),
                   "Couldn't read model");
-          List<BigInteger> featureVectorOpen = TestUtils.toBitIntegers(new int[]{11, 3, 5, 7});
+          List<BigInteger> featureVectorOpen = TestUtils.toBitIntegers(new int[] { 11, 3, 5, 7 });
 
           Application<BigInteger, ProtocolBuilderNumeric> testApplication = root -> {
             int treeInputPartyId = 1;
