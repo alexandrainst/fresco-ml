@@ -71,7 +71,7 @@ public class PlainEvaluator {
           // Find the index of the deepest node already computed in the subtree
           int currentLeafIdx = (1 << (j + i)) + k;
           int parentNodeIdx = (currentLeafIdx / (1 << i));
-          int subtreeNodeIdx = (currentLeafIdx / ((1 << i) - 1));
+          int subtreeNodeIdx = (currentLeafIdx / (1 << (i - 1)));
           // Adjust for 0-indexing
           // Check if we are left subtree
           BigInteger upperNode = subtreeNodeIdx % 2 == 0 ? BigInteger.ONE.subtract(lessThanFlags
