@@ -44,8 +44,8 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
         partialVal.add(par.numeric().known(BigInteger.ONE));
       }
       return () -> new Pair<>(new Pair<>(lessThanFlags, partialVal), 1);
-    }).whileLoop(pair -> pair.getSecond() < treeModel.getDepth(), (prevPar, pair) -> prevPar.par(
-        par -> {
+    }).whileLoop(pair -> pair.getSecond() <= treeModel.getDepth() - 2, (prevPar, pair) -> prevPar
+        .par(par -> {
           List<DRes<SInt>> lessThanFlags = pair.getFirst().getFirst();
           // Preprocess partial indicator bits
           List<DRes<SInt>> partialVal = pair.getFirst().getSecond();
@@ -59,11 +59,12 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
           // for (int i = 1; i < treeModel.getDepth(); i = 2 * i) {
           int i = pair.getSecond();
           // Iterate over relevant layers
-          for (int j = i - 1; j + i < treeModel.getDepth() - 1; j = j + 2 * i) {
+          for (int j = i - 1; j <= treeModel.getDepth() - 2; j = j + 2 * i) {
             // Iterate over the elements in the layer
-            for (int k = 0; k < 1 << (j + i); k++) {
+            int layerSize = Math.min((1 << (j + i)), (1 << (treeModel.getDepth() - 2)));
+            for (int k = 0; k < layerSize; k++) {
               // Find the index of the deepest node already computed in the subtree
-              int currentLeafIdx = (1 << (j + i)) + k;
+              int currentLeafIdx = layerSize + k;
               int parentNodeIdx = (currentLeafIdx / (1 << i));
               int subtreeNodeIdx = (currentLeafIdx / (1 << (i - 1)));
               // Adjust for 0-indexing
@@ -92,8 +93,7 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
                 parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
             // Then compute final indicator for the given leaf (category)
             DRes<SInt> finalIndicator = par.logical().and(parentIndicator, partialVal.get(
-                parentNodeIdx
-                - 1));
+                parentNodeIdx - 1));
             // Multiply indicator with category
             DRes<SInt> temp = par.numeric().mult(finalIndicator, treeModel.getCategories().get(i));
             // Compute partial sum

@@ -38,7 +38,7 @@ public class PlainEvaluator {
   BigInteger evaluate(List<BigInteger> featureVector) {
     List<BigInteger> lessThanFlags = new ArrayList<BigInteger>();
     List<BigInteger> partialVal = new ArrayList<>(lessThanFlags.size());
-    for (int j = 0; j < 1 << treeModel.getDepth(); j++) {
+    for (int j = 0; j < 1 << treeModel.getDepth() - 1; j++) {
       lessThanFlags.add(BigInteger.ONE); // placeholder
       partialVal.add(BigInteger.ONE); // placeholder
     }
@@ -61,14 +61,14 @@ public class PlainEvaluator {
     // Compute tree
 
     int i = 1;
-    while (i < treeModel.getDepth() - 1) {
+    while (i <= treeModel.getDepth() - 2) {
       // Iterate over relevant layers
-      int j;
-      for (j = i - 1; j < treeModel.getDepth() - 1; j = j + 2 * i) {
+      for (int j = i - 1; j <= treeModel.getDepth() - 2; j = j + 2 * i) {
         // Iterate over the elements in the layer
-        for (int k = 0; k < 1 << (j + i); k++) {
+        int layerSize = Math.min((1 << (j + i)), (1 << (treeModel.getDepth() - 2)));
+        for (int k = 0; k < layerSize; k++) {
           // Find the index of the deepest node already computed in the subtree
-          int currentLeafIdx = Math.min((1 << (j + i)), (1 << (treeModel.getDepth() - 2))) + k;
+          int currentLeafIdx = layerSize + k;
           int parentNodeIdx = (currentLeafIdx / (1 << i));
           int subtreeNodeIdx = (currentLeafIdx / (1 << (i - 1)));
           // Adjust for 0-indexing
