@@ -31,7 +31,7 @@ public class TestPlainEvaluator {
         .modelFromFile(loader.getFile("dtrees/models/test-model-2.csv"));
     PlainEvaluator evaluator = new PlainEvaluator(treeModel);
     Assert.assertEquals(BigInteger.valueOf(1),
-        evaluator.evaluate(TestUtils.toBitIntegers(new int[]{1, 1, 0, 1, 0, 0, 0})));
+        evaluator.evaluate(TestUtils.toBitIntegers(new int[]{1, 1, 0, 1, 0, 0, 0 })));
     Assert.assertEquals(BigInteger.valueOf(2),
         evaluator.evaluate(TestUtils.toBitIntegers(new int[]{1, 1, 0, 0, 0, 0, 0})));
     Assert.assertEquals(BigInteger.valueOf(3),
@@ -54,8 +54,8 @@ public class TestPlainEvaluator {
     DecisionTreeModel treeModel = loader.modelFromFile(loader.getFile(
         "dtrees/models/test-model-3.csv"));
     PlainEvaluator evaluator = new PlainEvaluator(treeModel);
-    Assert.assertEquals(BigInteger.valueOf(8), evaluator.evaluate(TestUtils.toBitIntegers(
-        new int[] { 1, 0, 0, 0, 0, 0, 0 })));
+    Assert.assertEquals(BigInteger.valueOf(12),
+        evaluator.evaluate(TestUtils.toBitIntegers(new int[] { 0, 0, 1, 0, 0, 0, 0 })));
   }
 
 }

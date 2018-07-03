@@ -38,11 +38,9 @@ public class PlainEvaluator {
   BigInteger evaluate(List<BigInteger> featureVector) {
     List<BigInteger> lessThanFlags = new ArrayList<BigInteger>();
     List<BigInteger> partialVal = new ArrayList<>(lessThanFlags.size());
-    List<BigInteger> newPartialVal = new ArrayList<>(lessThanFlags.size());
     for (int j = 0; j < 1 << treeModel.getDepth(); j++) {
-      lessThanFlags.add(new BigInteger("-1")); // placeholder
-      partialVal.add(new BigInteger("-1")); // placeholder
-      newPartialVal.add(new BigInteger("-1")); // placeholder
+      lessThanFlags.add(BigInteger.ONE); // placeholder
+      partialVal.add(BigInteger.ONE); // placeholder
     }
 
     // Compute lessThan flags
@@ -63,13 +61,14 @@ public class PlainEvaluator {
     // Compute tree
 
     int i = 1;
-    while (i < treeModel.getDepth()) {
+    while (i < treeModel.getDepth() - 1) {
       // Iterate over relevant layers
-      for (int j = i - 1; j + i < treeModel.getDepth() - 1; j = j + 2 * i) {
+      int j;
+      for (j = i - 1; j < treeModel.getDepth() - 1; j = j + 2 * i) {
         // Iterate over the elements in the layer
         for (int k = 0; k < 1 << (j + i); k++) {
           // Find the index of the deepest node already computed in the subtree
-          int currentLeafIdx = (1 << (j + i)) + k;
+          int currentLeafIdx = Math.min((1 << (j + i)), (1 << (treeModel.getDepth() - 2))) + k;
           int parentNodeIdx = (currentLeafIdx / (1 << i));
           int subtreeNodeIdx = (currentLeafIdx / (1 << (i - 1)));
           // Adjust for 0-indexing
@@ -92,8 +91,7 @@ public class PlainEvaluator {
       BigInteger parentIndicator = i % 2 == 0 ? BigInteger.ONE.subtract(lessThanFlags.get(
           parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
       // Then compute final indicator for the given leaf (category)
-      BigInteger finalIndicator = parentIndicator.multiply(partialVal.get(parentNodeIdx
-          - 1));
+      BigInteger finalIndicator = parentIndicator.multiply(partialVal.get(parentNodeIdx - 1));
       // Multiply indicator with category
       BigInteger temp = finalIndicator.multiply(treeModel.getCategories().get(i));
       // Compute partial sum
