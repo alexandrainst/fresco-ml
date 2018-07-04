@@ -145,8 +145,8 @@ public class DecisionTreeComputationTests {
     }
   }
 
-  public static class TestEvaluateDecisionTreeFive<ResourcePoolT extends ResourcePool>
-  extends TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
+  public static class TestEvaluateDecisionTreeFive<ResourcePoolT extends ResourcePool> extends
+      TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
 
     @Override
     public TestThread<ResourcePoolT, ProtocolBuilderNumeric> next() {
@@ -154,15 +154,38 @@ public class DecisionTreeComputationTests {
         @Override
         public void test() {
           ModelLoader loader = new ModelLoader();
-          DecisionTreeModel treeModel = ExceptionConverter
-              .safe(() -> loader.modelFromFile(loader.getFile("dtrees/models/test-model-3.csv")),
-                  "Couldn't read model");
-          List<List<BigInteger>> featureVectorsOpen = Arrays.asList(
-              TestUtils.toBitIntegers(new int[] { 0, 0, 1, 0, 0, 0, 0 }));
+          DecisionTreeModel treeModel = ExceptionConverter.safe(() -> loader.modelFromFile(loader
+              .getFile("dtrees/models/test-model-3.csv")), "Couldn't read model");
+          List<List<BigInteger>> featureVectorsOpen = Arrays.asList(TestUtils.toBitIntegers(
+              new int[] { 0, 0, 1, 0, 0, 0, 0 }));
 
           for (List<BigInteger> currentFeatureVectorOpen : featureVectorsOpen) {
-            BigInteger actual = runApplication(constructApp(treeModel,
-                currentFeatureVectorOpen));
+            BigInteger actual = runApplication(constructApp(treeModel, currentFeatureVectorOpen));
+            PlainEvaluator evaluator = new PlainEvaluator(treeModel);
+            BigInteger expected = evaluator.evaluate(currentFeatureVectorOpen);
+            Assert.assertEquals(expected, actual);
+          }
+        }
+      };
+    }
+  }
+
+  public static class TestEvaluateDecisionTreeSix<ResourcePoolT extends ResourcePool> extends
+      TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
+
+    @Override
+    public TestThread<ResourcePoolT, ProtocolBuilderNumeric> next() {
+      return new TestThread<ResourcePoolT, ProtocolBuilderNumeric>() {
+        @Override
+        public void test() {
+          ModelLoader loader = new ModelLoader();
+          DecisionTreeModel treeModel = ExceptionConverter.safe(() -> loader.modelFromFile(loader
+              .getFile("dtrees/models/test-model-4.csv")), "Couldn't read model");
+          List<List<BigInteger>> featureVectorsOpen = Arrays.asList(TestUtils.toBitIntegers(
+              new int[] { 0, 5, 4, 9, 12, 17, 11 }));
+
+          for (List<BigInteger> currentFeatureVectorOpen : featureVectorsOpen) {
+            BigInteger actual = runApplication(constructApp(treeModel, currentFeatureVectorOpen));
             PlainEvaluator evaluator = new PlainEvaluator(treeModel);
             BigInteger expected = evaluator.evaluate(currentFeatureVectorOpen);
             Assert.assertEquals(expected, actual);

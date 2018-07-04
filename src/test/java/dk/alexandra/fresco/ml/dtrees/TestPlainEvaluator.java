@@ -58,4 +58,14 @@ public class TestPlainEvaluator {
         evaluator.evaluate(TestUtils.toBitIntegers(new int[] { 0, 0, 1, 0, 0, 0, 0 })));
   }
 
+  @Test
+  public void testPlainEvaluatorDepthSix() throws IOException {
+    ModelLoader loader = new ModelLoader();
+    DecisionTreeModel treeModel = loader.modelFromFile(loader.getFile(
+        "dtrees/models/test-model-4.csv"));
+    PlainEvaluator evaluator = new PlainEvaluator(treeModel);
+    Assert.assertEquals(BigInteger.valueOf(25), evaluator.evaluate(TestUtils.toBitIntegers(
+        new int[] { 0, 5, 4, 9, 12, 17, 11 })));
+  }
+
 }
