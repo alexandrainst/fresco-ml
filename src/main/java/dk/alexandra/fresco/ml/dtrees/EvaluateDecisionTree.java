@@ -46,24 +46,26 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
         partialVal.add(par.numeric().known(BigInteger.ONE));
       }
       return () -> new Pair<>(new Pair<>(lessThanFlags, partialVal), 1);
-    }).whileLoop(pair -> pair.getSecond() <= treeModel.getDepth() - 2, (prevPar, pair) -> prevPar
+    }).whileLoop(pair -> pair.getSecond() < treeModel.getDepth() - 1, (prevPar, pair) -> prevPar
         .par(par -> {
           List<DRes<SInt>> lessThanFlags = pair.getFirst().getFirst();
           List<DRes<SInt>> partialVal = pair.getFirst().getSecond();
           // Let i be an exponentially increasing chunks size
           int i = pair.getSecond();
           // Iterate over the chunks in the tree
-          for (int j = i - 1; j <= treeModel.getDepth() - 2; j = j + 2 * i) {
+          for (int j = i - 1; j + 1 < treeModel.getDepth() - 1; j = j + 2 * i) {
             // Compute the amount of element in the current layer
             int layerSize = Math.min((1 << (j + i)), (1 << (treeModel.getDepth() - 2)));
+            // Compute the amounts of elements in the upper layer of the subtree
+            int subtreeLayerSize = 1 << (j + 1);
             // Iterate over the elements in the layer of the given chunk
             for (int k = 0; k < layerSize; k++) {
               // Find the index of the deepest node already computed in the subtree
               int currentLeafIdx = layerSize + k;
-              // Compute the index of parent of the chunk
-              int parentNodeIdx = (currentLeafIdx / (1 << i));
               // Compute the index of the highest element in the chunk-subtree
-              int subtreeNodeIdx = (currentLeafIdx / (1 << (i - 1)));
+              int subtreeNodeIdx = subtreeLayerSize + ((k * subtreeLayerSize) / layerSize);
+              // Compute the index of parent of the chunk
+              int parentNodeIdx = subtreeNodeIdx / 2;
               // Check if we are left subtree
               DRes<SInt> upperNode = subtreeNodeIdx % 2 == 0 ? par.logical().not(lessThanFlags.get(
                   parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
