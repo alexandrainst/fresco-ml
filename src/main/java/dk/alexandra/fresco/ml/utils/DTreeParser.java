@@ -4,14 +4,19 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import dk.alexandra.fresco.framework.util.Pair;
+import dk.alexandra.fresco.ml.dtrees.DecisionTreeModel;
 
 public class DTreeParser {
+  public static final int PRECISION = 4;
+
   private int depth = -1;
 
   private List<String> features;
@@ -21,10 +26,7 @@ public class DTreeParser {
   private List<List<Double>> weightsIdxs;
   private List<Integer> categoriesIdxs;
 
-  public DTreeParser() {
-  }
-
-  public void parseFile(String fileName) {
+  public DecisionTreeModel parseFile(String fileName) {
 
     try {
       FileReader fileReader = new FileReader(fileName);
@@ -33,21 +35,54 @@ public class DTreeParser {
       fileReader.close();
 
       setFeatures(collection.stream());
-      System.out.println(features);
       setCategories(collection.stream());
-      System.out.println(categories);
       setDepth(collection);
-      System.out.println(depth);
       constructTree(collection);
+      // We need to mirror the tree because the R model assumes you go left if the comparison is
+      // true and we assume you go right
+      mirrorTree();
+      System.out.println(features);
+      System.out.println(categories);
+      System.out.println(depth);
       System.out.println(featureIdxs);
       System.out.println(weightsIdxs);
       System.out.println(categoriesIdxs);
+      return makeTreeModel();
 
     } catch (FileNotFoundException ex) {
       System.out.println("Unable to open file '" + fileName + "'");
     } catch (IOException ex) {
       System.out.println("Error reading file '" + fileName + "'");
     }
+    return null;
+  }
+
+  private void mirrorTree() {
+    for (int i = 0; i < featureIdxs.size(); i++) {
+      Collections.reverse(featureIdxs.get(i));
+      Collections.reverse(weightsIdxs.get(i));
+    }
+    Collections.reverse(categoriesIdxs);
+  }
+
+  private DecisionTreeModel makeTreeModel() {
+    List<List<BigInteger>> features = new ArrayList<>();
+    List<List<BigInteger>> weights = new ArrayList<>();
+    for (int i = 0; i < features.size(); i++) {
+      List<BigInteger> currentFeatures = new ArrayList<>();
+      List<BigInteger> currentWeights = new ArrayList<>();
+      for (int j = 0; j < features.get(i).size(); j++) {
+        currentFeatures.add(new BigInteger(String.valueOf(featureIdxs.get(i).get(j))));
+        currentWeights.add(new BigInteger(String.valueOf(weightsIdxs.get(i).get(j))));
+      }
+      features.add(currentFeatures);
+      weights.add(currentWeights);
+    }
+    List<BigInteger> categories = new ArrayList<>();
+    for (int i = 0; i < categoriesIdxs.size(); i++) {
+      categories.add(new BigInteger(String.valueOf(categoriesIdxs.get(i))));
+    }
+    return new DecisionTreeModel(features, weights, categories);
   }
 
   private void constructTree(List<String> list) {
