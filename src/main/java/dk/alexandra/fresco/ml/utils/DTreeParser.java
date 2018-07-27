@@ -15,7 +15,21 @@ import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.ml.dtrees.DecisionTreeModel;
 
 public class DTreeParser {
-  public static final int PRECISION = 4;
+  private class Node {
+    protected int feature;
+    protected int category;
+    protected double weight;
+    protected boolean switchAround;
+
+    Node(int feature, int category, double weight, boolean switchAround) {
+      this.feature = feature;
+      this.category = category;
+      this.weight = weight;
+      this.switchAround = switchAround;
+    }
+  }
+
+  public static final int PRECISION = 10;
 
   private int depth = -1;
 
@@ -24,7 +38,9 @@ public class DTreeParser {
 
   private List<List<Integer>> featureIdxs;
   private List<List<Double>> weightsIdxs;
+  private List<List<Boolean>> switchIdxs;
   private List<Integer> categoriesIdxs;
+  private List<List<Integer>> totalCategoriesIdxs;
 
   public DecisionTreeModel parseFile(String fileName) {
 
@@ -40,14 +56,15 @@ public class DTreeParser {
       constructTree(collection);
       // We need to mirror the tree because the R model assumes you go left if the comparison is
       // true and we assume you go right
+      System.out.println(categoriesIdxs.get(372 - 256));
+      System.out.println(categoriesIdxs.get(373 - 256));
+      System.out.println(categoriesIdxs.get(374 - 256));
+      System.out.println(categoriesIdxs.get(375 - 256));
       mirrorTree();
-      System.out.println(features);
-      System.out.println(categories);
-      System.out.println(depth);
-      System.out.println(featureIdxs);
-      System.out.println(weightsIdxs);
-      System.out.println(categoriesIdxs);
-      return makeTreeModel();
+      DecisionTreeModel model = makeTreeModel();
+      System.out.println(model);
+
+      return model;
 
     } catch (FileNotFoundException ex) {
       System.out.println("Unable to open file '" + fileName + "'");
@@ -66,63 +83,140 @@ public class DTreeParser {
   }
 
   private DecisionTreeModel makeTreeModel() {
-    List<List<BigInteger>> features = new ArrayList<>();
-    List<List<BigInteger>> weights = new ArrayList<>();
-    for (int i = 0; i < features.size(); i++) {
+    List<List<BigInteger>> bigFeatures = new ArrayList<>();
+    List<List<BigInteger>> bigWeights = new ArrayList<>();
+    for (int i = 0; i < featureIdxs.size(); i++) {
       List<BigInteger> currentFeatures = new ArrayList<>();
       List<BigInteger> currentWeights = new ArrayList<>();
-      for (int j = 0; j < features.get(i).size(); j++) {
+      for (int j = 0; j < featureIdxs.get(i).size(); j++) {
         currentFeatures.add(new BigInteger(String.valueOf(featureIdxs.get(i).get(j))));
-        currentWeights.add(new BigInteger(String.valueOf(weightsIdxs.get(i).get(j))));
+        // Multiply with PRECISION to move to integers
+        currentWeights.add(new BigInteger(String.valueOf((int) (PRECISION * weightsIdxs.get(
+            i).get(j)))));
       }
-      features.add(currentFeatures);
-      weights.add(currentWeights);
+      bigFeatures.add(currentFeatures);
+      bigWeights.add(currentWeights);
     }
-    List<BigInteger> categories = new ArrayList<>();
+    List<BigInteger> bigCategories = new ArrayList<>();
     for (int i = 0; i < categoriesIdxs.size(); i++) {
-      categories.add(new BigInteger(String.valueOf(categoriesIdxs.get(i))));
+      bigCategories.add(new BigInteger(String.valueOf(categoriesIdxs.get(i))));
     }
-    return new DecisionTreeModel(features, weights, categories);
+    return new DecisionTreeModel(bigFeatures, bigWeights, bigCategories);
+  }
+
+  private void switchSubtree(int parentNodeIdx) {
+    int leftChildIdx = 2 * parentNodeIdx;
+    int childLayer = (int) Math.floor(Math.log(leftChildIdx) / Math.log(2));
+    for (int i = childLayer; i < depth; i++) {
+      switchLeftRight(leftChildIdx, 1 << (i - childLayer));
+      leftChildIdx = 2 * leftChildIdx;
+    }
+  }
+
+  private void switchLeftRight(int leftChildIdx, int length) {
+    int layer = (int) Math.floor(Math.log(leftChildIdx) / Math.log(2));
+    int leftChildOffset = leftChildIdx - (1 << layer);
+    int rightChildOffset = leftChildOffset + length;
+    // Switch nodes in current layer
+    for (int i = 0; i < length; i++) {
+      Integer leftFeature = featureIdxs.get(layer).get(leftChildOffset + i);
+      Integer rightFeature = featureIdxs.get(layer).get(rightChildOffset + i);
+      featureIdxs.get(layer).set(leftChildOffset + i, rightFeature);
+      featureIdxs.get(layer).set(rightChildOffset + i, leftFeature);
+      Double leftWeight = weightsIdxs.get(layer).get(leftChildOffset + i);
+      Double rightWeight = weightsIdxs.get(layer).get(rightChildOffset + i);
+      weightsIdxs.get(layer).set(leftChildOffset + i, rightWeight);
+      weightsIdxs.get(layer).set(rightChildOffset + i, leftWeight);
+      Integer leftCategory = totalCategoriesIdxs.get(layer).get(leftChildOffset + i);
+      Integer rightCategory = totalCategoriesIdxs.get(layer).get(rightChildOffset + i);
+      totalCategoriesIdxs.get(layer).set(leftChildOffset + i, rightCategory);
+      totalCategoriesIdxs.get(layer).set(rightChildOffset + i, leftCategory);
+    }
   }
 
   private void constructTree(List<String> list) {
     featureIdxs = new ArrayList<>();
     weightsIdxs = new ArrayList<>();
-    categoriesIdxs = new ArrayList<>();
+    totalCategoriesIdxs = new ArrayList<>();
+    switchIdxs = new ArrayList<>();
     // Iterate through the fully balanced binary tree, except the category layer
-    for (int i = 0; i < depth - 1; i++) {
+    for (int i = 0; i < depth; i++) {
       List<Integer> featureLayer = new ArrayList<>();
       List<Double> weightLayer = new ArrayList<>();
+      List<Boolean> switchLayer = new ArrayList<>();
+      List<Integer> categoryLayer = new ArrayList<>();
       for (int j = 0; j < 1 << i; j++) {
         int currentIdx = (1 << i) + j;
-        // Find node with 2x node index to find the current node's weight
-        Pair<Integer, Double> currentNode = findNode(2 * currentIdx, list);
+        // Find category
+        Node currentNode = null;
+        if (currentIdx > 1) { // Skip root
+          currentNode = findNode(currentIdx, list);
+          while (currentNode == null) {
+            currentIdx = currentIdx / 2;
+            currentNode = findNode(currentIdx, list);
+          }
+        }
         if (currentNode != null) {
-          featureLayer.add(currentNode.getFirst());
-          weightLayer.add(currentNode.getSecond());
+          categoryLayer.add(currentNode.category);
+        } else {
+          categoryLayer.add(-1);
+        }
+        // Find node with 2x node index to find the current node's weight
+        Node childNode = findNode(2 * currentIdx, list);
+        if (childNode != null) {
+          featureLayer.add(childNode.feature);
+          weightLayer.add(childNode.weight);
+          switchLayer.add(childNode.switchAround);
         } else {
           // The current node is terminal and we must insert a dummy node
           featureLayer.add(-1);
           weightLayer.add(0.0);
+          switchLayer.add(false);
         }
       }
       featureIdxs.add(featureLayer);
       weightsIdxs.add(weightLayer);
+      switchIdxs.add(switchLayer);
+      totalCategoriesIdxs.add(categoryLayer);
     }
-    // Set categories
+    // Do switches if needed
+    for (int i = 0; i < depth; i++) {
+      for (int j = 0; j < 1 << i; j++) {
+        if (switchIdxs.get(i).get(j)) {
+          int currentIdx = (1 << i) + j;
+          switchSubtree(currentIdx);
+        }
+      }
+    }
+    // Update categories
+    categoriesIdxs = new ArrayList<>();
     for (int i = 0; i < 1 << (depth - 1); i++) {
       int nodeIdx = (1 << (depth - 1)) + i;
       // Set category based on node index. And proceed up the tree if it does not exist
-      Pair<Integer, Double> currentNode = findNode(nodeIdx, list);
-      while (currentNode == null) {
-        // Find parent index
-        nodeIdx >>= 1;
-        currentNode = findNode(nodeIdx, list);
+      int currentLevel = depth - 1;
+      int currentOffset = i;
+      // We always skip the leaf layer as it has never been processed
+      int currentCategory = totalCategoriesIdxs.get(currentLevel).get(currentOffset);
+      while (currentCategory == -1) {
+        currentLevel--;
+        nodeIdx = nodeIdx / 2;
+        currentOffset = nodeIdx - (1 << currentLevel);
+        currentCategory = totalCategoriesIdxs.get(currentLevel).get(currentOffset);
       }
-      // Find the whole line for this node so we can find the category
-      String category = getCategory(findLine(nodeIdx, list));
-      categoriesIdxs.add(categories.indexOf(category));
+      categoriesIdxs.add(currentCategory);
+      // totalCategoriesIdxs.get(depth - 1).set(i, currentCategory);
+      //
+      // Node currentNode = findNode(nodeIdx, list);
+      // while (currentNode == null) {
+      // // Find parent index
+      // nodeIdx >>= 1;
+      // currentNode = findNode(nodeIdx, list);
+      // }
+      // // Find the whole line for this node so we can find the category
+      // categoriesIdxs.add(currentNode.category);
     }
+    System.out.println(totalCategoriesIdxs);
+    // categoriesIdxs = totalCategoriesIdxs.get(depth - 1);
 
   }
 
@@ -141,7 +235,8 @@ public class DTreeParser {
     features = new ArrayList<String>();
     // Skip the first 6 lines as the tree starts on line 6 and we want to skip the root as well
     stream.skip(6).forEach(line -> {
-      String feature = getFeature(line);
+      Pair<String, Boolean> featurePair = getFeature(line);
+      String feature = featurePair.getFirst();
       // Go to next line if we have already added the feature
       if (!features.contains(feature)) {
         // The number we will associate with the feature
@@ -174,20 +269,31 @@ public class DTreeParser {
     return Integer.parseInt(line.substring(0, nodeEnd));
   }
 
-  private String getFeature(String line) {
+  private Pair<String, Boolean> getFeature(String line) {
     line = line.trim();
     // String after the first whitespace contains the feature of the node
     int feaStart = line.indexOf(' ');
     int feaEnd = -1;
+    boolean shouldSwitch = false;
     if (getNodeIdx(line) % 2 == 0) {
       // Even indexed nodes have the < comparison
       feaEnd = line.indexOf('<', feaStart);
+      if (feaEnd == -1) {
+        // We have an annoying switch between < and >=
+        feaEnd = line.indexOf('>', feaStart);
+        shouldSwitch = true;
+      }
     } else {
       // Odd indexed nodes have the > comparison
       feaEnd = line.indexOf('>', feaStart);
+      if (feaEnd == -1) {
+        // We have an annoying switch between < and >=
+        feaEnd = line.indexOf('<', feaStart);
+        shouldSwitch = true;
+      }
     }
     // Plus 1 for skipping whitespace
-    return line.substring(feaStart + 1, feaEnd);
+    return new Pair<String, Boolean>(line.substring(feaStart + 1, feaEnd), shouldSwitch);
   }
 
   private String getCategory(String line) {
@@ -201,14 +307,14 @@ public class DTreeParser {
     return line.substring(catStart + 1, catEnd);
   }
 
-  private double getWeight(String line) {
+  private double getWeight(String line, boolean shouldSwitch) {
     line = line.trim();
     int weightStart = -1;
     int weightEnd = -1;
     // String after the first whitespace contains the feature of the node
     int temp = line.indexOf(' ');
     // And after the second we have the weight if we are in an even node
-    if (getNodeIdx(line) % 2 == 0) {
+    if (getNodeIdx(line) % 2 == 0 ^ shouldSwitch) {
       weightStart = line.indexOf(' ', temp + 1);
       weightEnd = line.indexOf(' ', weightStart + 1);
     } else {
@@ -220,17 +326,19 @@ public class DTreeParser {
     return Double.parseDouble(line.substring(weightStart + 1, weightEnd));
   }
 
-  private Pair<Integer, Double> findNode(int index, List<String> list) {
+  private Node findNode(int index, List<String> list) {
     Integer featureNum = null;
     Double weightVal = null;
     String line = findLine(index, list);
     if (line == null) {
       return null;
     }
-    String feature = getFeature(line);
-    featureNum = features.lastIndexOf(feature);
-    weightVal = getWeight(line);
-    return new Pair<>(featureNum, weightVal);
+    Pair<String, Boolean> feature = getFeature(line);
+    boolean shouldSwitch = feature.getSecond();
+    featureNum = features.lastIndexOf(feature.getFirst());
+    weightVal = getWeight(line, shouldSwitch);
+    int category = categories.lastIndexOf(getCategory(line));
+    return new Node(featureNum, category, weightVal, shouldSwitch);
   }
 
   private String findLine(int index, List<String> list) {
