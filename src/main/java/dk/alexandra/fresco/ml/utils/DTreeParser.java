@@ -29,6 +29,7 @@ public class DTreeParser {
     }
   }
 
+  // Multiply weights by this number and round to nearest integer
   public static final int PRECISION = 10;
 
   private int depth = -1;
@@ -56,10 +57,6 @@ public class DTreeParser {
       constructTree(collection);
       // We need to mirror the tree because the R model assumes you go left if the comparison is
       // true and we assume you go right
-      System.out.println(categoriesIdxs.get(372 - 256));
-      System.out.println(categoriesIdxs.get(373 - 256));
-      System.out.println(categoriesIdxs.get(374 - 256));
-      System.out.println(categoriesIdxs.get(375 - 256));
       mirrorTree();
       DecisionTreeModel model = makeTreeModel();
       System.out.println(model);
@@ -85,7 +82,8 @@ public class DTreeParser {
   private DecisionTreeModel makeTreeModel() {
     List<List<BigInteger>> bigFeatures = new ArrayList<>();
     List<List<BigInteger>> bigWeights = new ArrayList<>();
-    for (int i = 0; i < featureIdxs.size(); i++) {
+    // Skip the last layer as it is simply a dummy layer as it only contains category information
+    for (int i = 0; i < featureIdxs.size() - 1; i++) {
       List<BigInteger> currentFeatures = new ArrayList<>();
       List<BigInteger> currentWeights = new ArrayList<>();
       for (int j = 0; j < featureIdxs.get(i).size(); j++) {
@@ -149,7 +147,7 @@ public class DTreeParser {
         int currentIdx = (1 << i) + j;
         // Find category
         Node currentNode = null;
-        if (currentIdx > 1) { // Skip root
+        if (currentIdx > 1) { // Skip root since it will never have category
           currentNode = findNode(currentIdx, list);
           while (currentNode == null) {
             currentIdx = currentIdx / 2;
@@ -204,20 +202,7 @@ public class DTreeParser {
         currentCategory = totalCategoriesIdxs.get(currentLevel).get(currentOffset);
       }
       categoriesIdxs.add(currentCategory);
-      // totalCategoriesIdxs.get(depth - 1).set(i, currentCategory);
-      //
-      // Node currentNode = findNode(nodeIdx, list);
-      // while (currentNode == null) {
-      // // Find parent index
-      // nodeIdx >>= 1;
-      // currentNode = findNode(nodeIdx, list);
-      // }
-      // // Find the whole line for this node so we can find the category
-      // categoriesIdxs.add(currentNode.category);
     }
-    System.out.println(totalCategoriesIdxs);
-    // categoriesIdxs = totalCategoriesIdxs.get(depth - 1);
-
   }
 
   private void setDepth(List<String> list) {
