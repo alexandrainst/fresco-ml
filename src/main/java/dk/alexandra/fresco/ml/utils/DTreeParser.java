@@ -29,8 +29,11 @@ public class DTreeParser {
     }
   }
 
+  // The amount of non-empty lines in the file before the first node
+  private static final int META_LINES = 3;
+
   // Multiply weights by this number and round to nearest integer
-  public static final int PRECISION = 10;
+  private static int PRECISION;
 
   private int depth = -1;
 
@@ -40,17 +43,20 @@ public class DTreeParser {
   private List<List<Integer>> featureIdxs;
   private List<List<Double>> weightsIdxs;
   private List<List<Boolean>> switchIdxs;
-  private List<Integer> categoriesIdxs;
-  private List<List<Integer>> totalCategoriesIdxs;
+  private List<List<Integer>> categoriesIdxs;
+
+  public DTreeParser(int precision) {
+    PRECISION = precision;
+  }
 
   public DecisionTreeModel parseFile(String fileName) {
 
     try {
       FileReader fileReader = new FileReader(fileName);
       BufferedReader reader = new BufferedReader(fileReader);
-      List<String> collection = reader.lines().collect(Collectors.toList());
+      List<String> collection = reader.lines().filter(line -> !line.trim().isEmpty()).collect(
+          Collectors.toList());
       fileReader.close();
-
       setFeatures(collection.stream());
       setCategories(collection.stream());
       setDepth(collection);
@@ -59,7 +65,6 @@ public class DTreeParser {
       // true and we assume you go right
       mirrorTree();
       DecisionTreeModel model = makeTreeModel();
-      System.out.println(model);
 
       return model;
 
@@ -75,8 +80,8 @@ public class DTreeParser {
     for (int i = 0; i < featureIdxs.size(); i++) {
       Collections.reverse(featureIdxs.get(i));
       Collections.reverse(weightsIdxs.get(i));
+      Collections.reverse(categoriesIdxs.get(i));
     }
-    Collections.reverse(categoriesIdxs);
   }
 
   private DecisionTreeModel makeTreeModel() {
@@ -96,8 +101,8 @@ public class DTreeParser {
       bigWeights.add(currentWeights);
     }
     List<BigInteger> bigCategories = new ArrayList<>();
-    for (int i = 0; i < categoriesIdxs.size(); i++) {
-      bigCategories.add(new BigInteger(String.valueOf(categoriesIdxs.get(i))));
+    for (int i = 0; i < categoriesIdxs.get(categoriesIdxs.size() - 1).size(); i++) {
+      bigCategories.add(new BigInteger(String.valueOf(categoriesIdxs.get(categoriesIdxs.size() - 1).get(i))));
     }
     return new DecisionTreeModel(bigFeatures, bigWeights, bigCategories);
   }
@@ -125,17 +130,17 @@ public class DTreeParser {
       Double rightWeight = weightsIdxs.get(layer).get(rightChildOffset + i);
       weightsIdxs.get(layer).set(leftChildOffset + i, rightWeight);
       weightsIdxs.get(layer).set(rightChildOffset + i, leftWeight);
-      Integer leftCategory = totalCategoriesIdxs.get(layer).get(leftChildOffset + i);
-      Integer rightCategory = totalCategoriesIdxs.get(layer).get(rightChildOffset + i);
-      totalCategoriesIdxs.get(layer).set(leftChildOffset + i, rightCategory);
-      totalCategoriesIdxs.get(layer).set(rightChildOffset + i, leftCategory);
+      Integer leftCategory = categoriesIdxs.get(layer).get(leftChildOffset + i);
+      Integer rightCategory = categoriesIdxs.get(layer).get(rightChildOffset + i);
+      categoriesIdxs.get(layer).set(leftChildOffset + i, rightCategory);
+      categoriesIdxs.get(layer).set(rightChildOffset + i, leftCategory);
     }
   }
 
   private void constructTree(List<String> list) {
     featureIdxs = new ArrayList<>();
     weightsIdxs = new ArrayList<>();
-    totalCategoriesIdxs = new ArrayList<>();
+    categoriesIdxs = new ArrayList<>();
     switchIdxs = new ArrayList<>();
     // Iterate through the fully balanced binary tree, except the category layer
     for (int i = 0; i < depth; i++) {
@@ -175,7 +180,7 @@ public class DTreeParser {
       featureIdxs.add(featureLayer);
       weightsIdxs.add(weightLayer);
       switchIdxs.add(switchLayer);
-      totalCategoriesIdxs.add(categoryLayer);
+      categoriesIdxs.add(categoryLayer);
     }
     // Do switches if needed
     for (int i = 0; i < depth; i++) {
@@ -186,28 +191,12 @@ public class DTreeParser {
         }
       }
     }
-    // Update categories
-    categoriesIdxs = new ArrayList<>();
-    for (int i = 0; i < 1 << (depth - 1); i++) {
-      int nodeIdx = (1 << (depth - 1)) + i;
-      // Set category based on node index. And proceed up the tree if it does not exist
-      int currentLevel = depth - 1;
-      int currentOffset = i;
-      // We always skip the leaf layer as it has never been processed
-      int currentCategory = totalCategoriesIdxs.get(currentLevel).get(currentOffset);
-      while (currentCategory == -1) {
-        currentLevel--;
-        nodeIdx = nodeIdx / 2;
-        currentOffset = nodeIdx - (1 << currentLevel);
-        currentCategory = totalCategoriesIdxs.get(currentLevel).get(currentOffset);
-      }
-      categoriesIdxs.add(currentCategory);
-    }
   }
 
   private void setDepth(List<String> list) {
     int maxNode = -1;
-    for (int i = 6; i < list.size(); i++) {
+    // Skip meta lines along with the root
+    for (int i = META_LINES + 1; i < list.size(); i++) {
       int nodeIdx = getNodeIdx(list.get(i));
       if (nodeIdx > maxNode) {
         maxNode = nodeIdx;
@@ -218,8 +207,8 @@ public class DTreeParser {
 
   private void setFeatures(Stream<String> stream) throws IOException {
     features = new ArrayList<String>();
-    // Skip the first 6 lines as the tree starts on line 6 and we want to skip the root as well
-    stream.skip(6).forEach(line -> {
+    // Skip the first meta lines and an extra since we want to skip the root as well
+    stream.skip(META_LINES + 1).forEach(line -> {
       Pair<String, Boolean> featurePair = getFeature(line);
       String feature = featurePair.getFirst();
       // Go to next line if we have already added the feature
@@ -234,8 +223,8 @@ public class DTreeParser {
 
   private void setCategories(Stream<String> stream) {
     categories = new ArrayList<String>();
-    // Skip the first 6 lines as the tree starts on line 6 and we want to skip the root as well
-    stream.skip(6).forEach(line -> {
+    // Skip the first meta lines and an extra since we want to skip the root as well
+    stream.skip(META_LINES + 1).forEach(line -> {
       String category = getCategory(line);
       // Go to next line if we have already added the category
       if (!categories.contains(category)) {
@@ -328,7 +317,7 @@ public class DTreeParser {
 
   private String findLine(int index, List<String> list) {
     // Skip header and start at root node
-    for (int i = 5; i < list.size(); i++) {
+    for (int i = META_LINES; i < list.size(); i++) {
       String currentLine = list.get(i);
       if (getNodeIdx(currentLine) == index) {
         return currentLine;
@@ -338,7 +327,7 @@ public class DTreeParser {
   }
 
   public static void main(String args[]) {
-    DTreeParser parser = new DTreeParser();
+    DTreeParser parser = new DTreeParser(1);
     parser.parseFile(args[0]);
   }
 }
