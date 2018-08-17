@@ -41,5 +41,12 @@ public class TestDecisionTreeComputationsSpdz extends AbstractSpdzTest {
         EvaluationStrategy.SEQUENTIAL,
         PreprocessingStrategy.DUMMY, 2);
   }
-  
+
+  @Test
+  public void testEvaluateDecisionTreeBroken() {
+    runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTree<>(),
+        EvaluationStrategy.SEQUENTIAL_BATCHED,
+        PreprocessingStrategy.DUMMY, 2);
+  }
+
 }
