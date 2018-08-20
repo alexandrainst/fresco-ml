@@ -88,30 +88,30 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
           Pair<Pair<List<DRes<SInt>>, List<DRes<SInt>>>, Integer> pairIntegerPair = new Pair<>(
               new Pair<>(lessThanFlags, partialVal), 2 * pair.getSecond());
           return () -> pairIntegerPair;
-        })).seq((par, res) -> {
-      DRes<SInt> currentRes = null;
-      // Compute the correct category by iterating over each of them
-      for (int i = 0; i < treeModel.getCategories().size(); i++) {
-        List<DRes<SInt>> lessThanFlags = res.getFirst().getFirst();
-        List<DRes<SInt>> partialVal = res.getFirst().getSecond();
-        // Find the index of the inner node that is the parent of the i'th leaf (category)
-        int parentNodeIdx = (1 << (treeModel.getDepth() - 2)) + (i / 2);
-        // Negate the bit of the parent in case the leaf (category) is a left child
-        DRes<SInt> parentIndicator = i % 2 == 0 ? par.logical().not(lessThanFlags.get(
-            parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
-        // Then compute final indicator for the given leaf (category)
-        DRes<SInt> finalIndicator = par.logical().and(parentIndicator, partialVal.get(
-            parentNodeIdx - 1));
-        // Multiply indicator bit with category value
-        DRes<SInt> temp = par.numeric().mult(finalIndicator, treeModel.getCategories().get(i));
-        // Compute partial sum
-        if (currentRes == null) {
-          currentRes = temp;
-        } else {
-          currentRes = par.numeric().add(currentRes, temp);
-        }
-      }
-      return currentRes;
-    });
+        }))
+        // after while loop
+        .par((par, res) -> {
+          List<DRes<SInt>> lessThanFlags = res.getFirst().getFirst();
+          List<DRes<SInt>> partialVal = res.getFirst().getSecond();
+          List<DRes<SInt>> categories = new ArrayList<>();
+          // Compute the correct category by iterating over each of them
+          for (int i = 0; i < treeModel.getCategories().size(); i++) {
+            int finalI = i;
+            DRes<SInt> temp = par.seq(seq -> {
+              // Find the index of the inner node that is the parent of the i'th leaf (category)
+              int parentNodeIdx = (1 << (treeModel.getDepth() - 2)) + (finalI / 2);
+              // Negate the bit of the parent in case the leaf (category) is a left child
+              DRes<SInt> parentIndicator = finalI % 2 == 0 ? seq.logical().not(lessThanFlags.get(
+                  parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
+              // Then compute final indicator for the given leaf (category)
+              DRes<SInt> finalIndicator = seq.logical().and(parentIndicator, partialVal.get(
+                  parentNodeIdx - 1));
+              // Multiply indicator bit with category value
+              return seq.numeric().mult(finalIndicator, treeModel.getCategories().get(finalI));
+            });
+            categories.add(temp);
+          }
+          return () -> categories;
+        }).seq((seq, categories) -> seq.advancedNumeric().sum(categories));
   }
 }

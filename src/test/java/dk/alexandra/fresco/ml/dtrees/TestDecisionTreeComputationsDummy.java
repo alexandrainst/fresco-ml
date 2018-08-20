@@ -4,7 +4,7 @@ import dk.alexandra.fresco.suite.dummy.arithmetic.AbstractDummyArithmeticTest;
 import org.junit.Test;
 
 public class TestDecisionTreeComputationsDummy extends AbstractDummyArithmeticTest {
-  
+
   @Test
   public void testEvaluateDecisionTree() {
     runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTree<>(),
