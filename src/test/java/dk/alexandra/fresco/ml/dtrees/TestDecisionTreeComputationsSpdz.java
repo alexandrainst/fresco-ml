@@ -8,13 +8,6 @@ import org.junit.Test;
 public class TestDecisionTreeComputationsSpdz extends AbstractSpdzTest {
 
   @Test
-  public void testInputDecisionTree() {
-    runTest(new DecisionTreeComputationTests.TestInputDecisionTree<>(),
-        EvaluationStrategy.SEQUENTIAL_BATCHED,
-        PreprocessingStrategy.DUMMY, 2);
-  }
-
-  @Test
   public void testEvaluateDecisionTree() {
     runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTree<>(),
         EvaluationStrategy.SEQUENTIAL_BATCHED,

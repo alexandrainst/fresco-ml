@@ -45,44 +45,8 @@ public class DecisionTreeComputationTests {
     };
   }
 
-  public static class TestInputDecisionTree<ResourcePoolT extends ResourcePool>
-  extends TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
-
-    @Override
-    public TestThread<ResourcePoolT, ProtocolBuilderNumeric> next() {
-      return new TestThread<ResourcePoolT, ProtocolBuilderNumeric>() {
-        @Override
-        public void test() {
-          Application<BigInteger, ProtocolBuilderNumeric> testApplication = root -> {
-            ModelLoader loader = new ModelLoader();
-            DecisionTreeModel treeModel = ExceptionConverter
-                .safe(() -> loader.modelFromFile(loader.getFile("dtrees/models/test-model-1.csv")),
-                    "Couldn't read model");
-
-            int inputPartyId = 1;
-            int featureVectorSize = 5;
-
-            DRes<DecisionTreeModelClosed> closedModel;
-            if (root.getBasicNumericContext().getMyId() == inputPartyId) {
-              InputDecisionTree f = new InputDecisionTree(treeModel, featureVectorSize,
-                  inputPartyId);
-              closedModel = root.seq(f);
-            } else {
-              InputDecisionTreeAsReceiver f = new InputDecisionTreeAsReceiver(treeModel.getDepth(),
-                  featureVectorSize, inputPartyId);
-              closedModel = root.seq(f);
-            }
-            // TODO actually test something
-            return () -> BigInteger.ONE;
-          };
-          runApplication(testApplication);
-        }
-      };
-    }
-  }
-
   public static class TestEvaluateDecisionTree<ResourcePoolT extends ResourcePool>
-  extends TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
+      extends TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
 
     @Override
     public TestThread<ResourcePoolT, ProtocolBuilderNumeric> next() {
@@ -94,10 +58,10 @@ public class DecisionTreeComputationTests {
               .safe(() -> loader.modelFromFile(loader.getFile("dtrees/models/test-model-1.csv")),
                   "Couldn't read model");
           List<List<BigInteger>> featureVectorsOpen = Arrays.asList(
-              TestUtils.toBitIntegers(new int[] { 11, 3, 5, 7 }),
-              TestUtils.toBitIntegers(new int[] { 11, 0, 5, 7 }),
-              TestUtils.toBitIntegers(new int[] { 5, 0, 5, 12 }),
-              TestUtils.toBitIntegers(new int[] { 4, 0, 5, 7 }));
+              TestUtils.toBitIntegers(new int[]{11, 3, 5, 7}),
+              TestUtils.toBitIntegers(new int[]{11, 0, 5, 7}),
+              TestUtils.toBitIntegers(new int[]{5, 0, 5, 12}),
+              TestUtils.toBitIntegers(new int[]{4, 0, 5, 7}));
 
           for (List<BigInteger> currentFeatureVectorOpen : featureVectorsOpen) {
             BigInteger actual = runApplication(constructApp(treeModel,
@@ -112,7 +76,7 @@ public class DecisionTreeComputationTests {
   }
 
   public static class TestEvaluateDecisionTreeFour<ResourcePoolT extends ResourcePool>
-  extends TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
+      extends TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
 
     @Override
     public TestThread<ResourcePoolT, ProtocolBuilderNumeric> next() {
@@ -157,7 +121,7 @@ public class DecisionTreeComputationTests {
           DecisionTreeModel treeModel = ExceptionConverter.safe(() -> loader.modelFromFile(loader
               .getFile("dtrees/models/test-model-3.csv")), "Couldn't read model");
           List<List<BigInteger>> featureVectorsOpen = Arrays.asList(TestUtils.toBitIntegers(
-              new int[] { 0, 0, 1, 0, 0, 0, 0 }));
+              new int[]{0, 0, 1, 0, 0, 0, 0}));
 
           for (List<BigInteger> currentFeatureVectorOpen : featureVectorsOpen) {
             BigInteger actual = runApplication(constructApp(treeModel, currentFeatureVectorOpen));
@@ -182,7 +146,7 @@ public class DecisionTreeComputationTests {
           DecisionTreeModel treeModel = ExceptionConverter.safe(() -> loader.modelFromFile(loader
               .getFile("dtrees/models/test-model-4.csv")), "Couldn't read model");
           List<List<BigInteger>> featureVectorsOpen = Arrays.asList(TestUtils.toBitIntegers(
-              new int[] { 0, 5, 4, 9, 12, 17, 11 }));
+              new int[]{0, 5, 4, 9, 12, 17, 11}));
 
           for (List<BigInteger> currentFeatureVectorOpen : featureVectorsOpen) {
             BigInteger actual = runApplication(constructApp(treeModel, currentFeatureVectorOpen));
