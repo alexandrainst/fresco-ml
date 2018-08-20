@@ -26,6 +26,27 @@ public class TestDecisionTreeComputationsSpdz2k extends
         2);
   }
 
+  @Test
+  public void testEvaluateDecisionTreeFour() {
+    runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTreeFour<>(),
+        EvaluationStrategy.SEQUENTIAL_BATCHED,
+        2);
+  }
+
+  @Test
+  public void testEvaluateDecisionTreeFive() {
+    runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTreeFive<>(),
+        EvaluationStrategy.SEQUENTIAL_BATCHED,
+        2);
+  }
+
+  @Test
+  public void testEvaluateDecisionTreeSix() {
+    runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTreeSix<>(),
+        EvaluationStrategy.SEQUENTIAL_BATCHED,
+        2);
+  }
+
   @Override
   protected Spdz2kResourcePool<CompUInt128> createResourcePool(int playerId, int noOfParties,
       Supplier<Network> networkSupplier) {

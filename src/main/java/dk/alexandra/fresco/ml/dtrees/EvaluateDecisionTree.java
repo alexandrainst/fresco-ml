@@ -5,7 +5,6 @@ import dk.alexandra.fresco.framework.builder.Computation;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.framework.value.SInt;
-
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,12 +72,12 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
               par.seq(seq -> {
                 // this is a different scope and the state has changed...
                 DRes<SInt> upperNode =
-                    subtreeNodeIdx % 2 == 0 ? seq.logical().not(lessThanFlags.get(
+                    subtreeNodeIdx % 2 == 0 ? seq.logicalArithmetic().not(lessThanFlags.get(
                         parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
                 // Compute partial product for upper subtree
-                DRes<SInt> upperPartial = seq.logical().and(upperNode,
+                DRes<SInt> upperPartial = seq.logicalArithmetic().and(upperNode,
                     partialVal.get(parentNodeIdx - 1));
-                DRes<SInt> newPartial = seq.logical()
+                DRes<SInt> newPartial = seq.logicalArithmetic()
                     .and(upperPartial, partialVal.get(currentLeafIdx - 1));
                 partialVal.set(currentLeafIdx - 1, newPartial);
                 return null;
@@ -101,11 +100,13 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
               // Find the index of the inner node that is the parent of the i'th leaf (category)
               int parentNodeIdx = (1 << (treeModel.getDepth() - 2)) + (finalI / 2);
               // Negate the bit of the parent in case the leaf (category) is a left child
-              DRes<SInt> parentIndicator = finalI % 2 == 0 ? seq.logical().not(lessThanFlags.get(
-                  parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
+              DRes<SInt> parentIndicator =
+                  finalI % 2 == 0 ? seq.logicalArithmetic().not(lessThanFlags.get(
+                      parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
               // Then compute final indicator for the given leaf (category)
-              DRes<SInt> finalIndicator = seq.logical().and(parentIndicator, partialVal.get(
-                  parentNodeIdx - 1));
+              DRes<SInt> finalIndicator = seq.logicalArithmetic()
+                  .and(parentIndicator, partialVal.get(
+                      parentNodeIdx - 1));
               // Multiply indicator bit with category value
               return seq.numeric().mult(finalIndicator, treeModel.getCategories().get(finalI));
             });
