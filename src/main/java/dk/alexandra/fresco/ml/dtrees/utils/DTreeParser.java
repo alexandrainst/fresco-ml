@@ -1,4 +1,4 @@
-package dk.alexandra.fresco.ml.utils;
+package dk.alexandra.fresco.ml.dtrees.utils;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;

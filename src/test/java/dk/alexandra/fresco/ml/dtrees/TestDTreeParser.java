@@ -13,7 +13,7 @@ import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Test;
 
-import dk.alexandra.fresco.ml.utils.DTreeParser;
+import dk.alexandra.fresco.ml.dtrees.utils.DTreeParser;
 
 public class TestDTreeParser {
   private static List<String> testFile;
