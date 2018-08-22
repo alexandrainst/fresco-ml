@@ -15,7 +15,9 @@ import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.ml.dtrees.DecisionTreeModel;
 
 public class DTreeParser {
+
   private class Node {
+
     protected int feature;
     protected int category;
     protected double weight;
@@ -30,7 +32,7 @@ public class DTreeParser {
   }
 
   // The amount of non-empty lines in the file before the first node
-  private static final int META_LINES = 3;
+  private static final int META_LINES = 4;
 
   // Multiply weights by this number and round to nearest integer
   private static int PRECISION;
@@ -40,6 +42,9 @@ public class DTreeParser {
   private List<String> features;
   private List<String> categories;
 
+  // the number of features in the training set; this is not the same as the number of distinct
+  // feature indexes, since some of the features might not be used in the tree
+  private int numOriginalFeatures;
   private List<List<Integer>> featureIdxs;
   private List<List<Double>> weightsIdxs;
   private List<List<Boolean>> switchIdxs;
@@ -57,6 +62,8 @@ public class DTreeParser {
       List<String> collection = reader.lines().filter(line -> !line.trim().isEmpty()).collect(
           Collectors.toList());
       fileReader.close();
+
+      this.numOriginalFeatures = Integer.parseInt(collection.get(0));
       setFeatures(collection.stream());
       setCategories(collection.stream());
       setDepth(collection);
@@ -64,9 +71,8 @@ public class DTreeParser {
       // We need to mirror the tree because the R model assumes you go left if the comparison is
       // true and we assume you go right
       mirrorTree();
-      DecisionTreeModel model = makeTreeModel();
 
-      return model;
+      return makeTreeModel();
 
     } catch (FileNotFoundException ex) {
       System.out.println("Unable to open file '" + fileName + "'");
@@ -102,7 +108,8 @@ public class DTreeParser {
     }
     List<BigInteger> bigCategories = new ArrayList<>();
     for (int i = 0; i < categoriesIdxs.get(categoriesIdxs.size() - 1).size(); i++) {
-      bigCategories.add(new BigInteger(String.valueOf(categoriesIdxs.get(categoriesIdxs.size() - 1).get(i))));
+      bigCategories.add(
+          new BigInteger(String.valueOf(categoriesIdxs.get(categoriesIdxs.size() - 1).get(i))));
     }
     return new DecisionTreeModel(bigFeatures, bigWeights, bigCategories);
   }
@@ -205,8 +212,8 @@ public class DTreeParser {
     depth = (int) Math.ceil(Math.log(maxNode) / Math.log(2));
   }
 
-  private void setFeatures(Stream<String> stream) throws IOException {
-    features = new ArrayList<String>();
+  private void setFeatures(Stream<String> stream) {
+    features = new ArrayList<>();
     // Skip the first meta lines and an extra since we want to skip the root as well
     stream.skip(META_LINES + 1).forEach(line -> {
       Pair<String, Boolean> featurePair = getFeature(line);
@@ -222,7 +229,7 @@ public class DTreeParser {
   }
 
   private void setCategories(Stream<String> stream) {
-    categories = new ArrayList<String>();
+    categories = new ArrayList<>();
     // Skip the first meta lines and an extra since we want to skip the root as well
     stream.skip(META_LINES + 1).forEach(line -> {
       String category = getCategory(line);
@@ -267,7 +274,7 @@ public class DTreeParser {
       }
     }
     // Plus 1 for skipping whitespace
-    return new Pair<String, Boolean>(line.substring(feaStart + 1, feaEnd), shouldSwitch);
+    return new Pair<>(line.substring(feaStart + 1, feaEnd), shouldSwitch);
   }
 
   private String getCategory(String line) {
@@ -301,8 +308,8 @@ public class DTreeParser {
   }
 
   private Node findNode(int index, List<String> list) {
-    Integer featureNum = null;
-    Double weightVal = null;
+    Integer featureNum;
+    Double weightVal;
     String line = findLine(index, list);
     if (line == null) {
       return null;
