@@ -62,7 +62,6 @@ public class DTreeParser {
       List<String> collection = reader.lines().filter(line -> !line.trim().isEmpty()).collect(
           Collectors.toList());
       fileReader.close();
-
       this.numOriginalFeatures = Integer.parseInt(collection.get(0));
       setFeatures(collection.stream());
       setCategories(collection.stream());
@@ -111,7 +110,8 @@ public class DTreeParser {
       bigCategories.add(
           new BigInteger(String.valueOf(categoriesIdxs.get(categoriesIdxs.size() - 1).get(i))));
     }
-    return new DecisionTreeModel(bigFeatures, bigWeights, bigCategories);
+    return new DecisionTreeModel(depth, numOriginalFeatures, bigFeatures,
+        bigWeights, bigCategories);
   }
 
   private void switchSubtree(int parentNodeIdx) {
