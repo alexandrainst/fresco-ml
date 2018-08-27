@@ -62,7 +62,6 @@ public class DTreeParser {
       List<String> collection = reader.lines().filter(line -> !line.trim().isEmpty()).collect(
           Collectors.toList());
       fileReader.close();
-      this.numOriginalFeatures = Integer.parseInt(collection.get(0));
       setFeatures(collection.stream());
       setCategories(collection.stream());
       setDepth(collection);
@@ -145,6 +144,7 @@ public class DTreeParser {
   }
 
   private void constructTree(List<String> list) {
+    numOriginalFeatures = Integer.parseInt(list.get(0));
     featureIdxs = new ArrayList<>();
     weightsIdxs = new ArrayList<>();
     categoriesIdxs = new ArrayList<>();

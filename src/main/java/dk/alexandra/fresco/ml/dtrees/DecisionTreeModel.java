@@ -23,8 +23,11 @@ public class DecisionTreeModel {
       List<BigInteger> categories) {
     this.depth = depth;
     this.numOriginalFeatures = numOriginalFeatures;
-    if (numOriginalFeatures < getNumFeatures(featureIndexes)) {
-      throw new IllegalArgumentException("Can't have fewer original features than actual features");
+    int numFeatures = getNumFeatures(featureIndexes);
+    if (numOriginalFeatures < numFeatures) {
+      throw new IllegalArgumentException(
+          "Can't have fewer original features than actual features " + this.numOriginalFeatures
+              + " " + numFeatures);
     }
     this.featureIndexes = featureIndexes;
     this.weights = weights;
@@ -94,5 +97,5 @@ public class DecisionTreeModel {
   public int getNumOriginalFeatures() {
     return numOriginalFeatures;
   }
-  
+
 }

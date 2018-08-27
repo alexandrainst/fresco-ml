@@ -27,11 +27,11 @@ public class DecisionTreeComputationTests {
       DRes<DecisionTreeModelClosed> closedModelD;
       if (root.getBasicNumericContext().getMyId() == treeInputPartyId) {
         InputDecisionTree f = new InputDecisionTree(treeModel, featureVectorSize, treeInputPartyId);
-        closedModelD = root.seq(f);
+        closedModelD = root.par(f);
       } else {
         InputDecisionTreeAsReceiver f = new InputDecisionTreeAsReceiver(treeModel.getDepth(),
             featureVectorSize, treeInputPartyId);
-        closedModelD = root.seq(f);
+        closedModelD = root.par(f);
       }
 
       DRes<List<DRes<SInt>>> featureVectorD = root.collections().closeList(featureVectorOpen,
