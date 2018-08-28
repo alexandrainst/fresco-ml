@@ -39,9 +39,7 @@ public final class FlTrainerImpl implements FlTrainer {
 
   @Override
   public void fitLocalModel() {
-    for (int i = 0; i < epochs; i++) {
-      model.fit(trainingData);
-    }
+    model.fit(trainingData, epochs);
   }
 
   @Override
