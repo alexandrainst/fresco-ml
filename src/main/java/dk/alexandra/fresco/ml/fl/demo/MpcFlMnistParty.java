@@ -24,8 +24,11 @@ import dk.alexandra.fresco.suite.spdz.storage.SpdzDummyDataSupplier;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -33,9 +36,11 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.deeplearning4j.datasets.iterator.ExistingDataSetIterator;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,13 +169,23 @@ public class MpcFlMnistParty {
       throws IOException {
     ClientFlHandler flHandler = new DirectMpcFlHandler<>(setup.getSce(), setup.getRp(),
         setup.getNet());
-    DataSetIterator trainSet = new MnistDataSetIterator(context.getBatchSize(),
-        context.getLocalExamples(), false, true, true, setup.getRp().getMyId());
+    //DataSetIterator trainSet = new MnistDataSetIterator(context.getBatchSize(),
+    //    context.getLocalExamples(), false, true, true, setup.getRp().getMyId());
+    DataSetIterator trainSet = getTrainingData(setup.getRp().getMyId(), context.getLocalExamples(), context.getBatchSize());
     MultiLayerNetwork model = new MultiLayerNetwork(context.getConf());
     model.init();
     FlTrainer trainer = new FlTrainerImpl(flHandler, model, trainSet, context.getLocalEpochs(),
         context.getLocalExamples());
     return trainer;
+  }
+
+  private static DataSetIterator getTrainingData(int id, int examples, int batch) throws IOException {
+    MnistDataSetIterator it = new MnistDataSetIterator(60000, 60000, false);
+    DataSet data = it.next();
+    data = data.filterBy(IntStream.range(0, 10).filter(i -> i != id).toArray());
+    data = data.sample(examples);
+    System.out.println("Examples: " + data.numExamples());
+    return new ExistingDataSetIterator(data.batchBy(batch));
   }
 
   private static SpdzTestSetup createSetup(int myId, int numParties) {
