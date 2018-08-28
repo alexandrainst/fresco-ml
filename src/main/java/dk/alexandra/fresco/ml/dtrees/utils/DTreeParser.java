@@ -189,12 +189,25 @@ public class DTreeParser {
       switchIdxs.add(switchLayer);
       categoriesIdxs.add(categoryLayer);
     }
+    // can't use negative one indexes for dummy nodes since that leaks information during the index
+    // check, so use 0 instead
+    replaceNegativeOnes();
     // Do switches if needed
     for (int i = 0; i < depth; i++) {
       for (int j = 0; j < 1 << i; j++) {
         if (switchIdxs.get(i).get(j)) {
           int currentIdx = (1 << i) + j;
           switchSubtree(currentIdx);
+        }
+      }
+    }
+  }
+
+  private void replaceNegativeOnes() {
+    for (List<Integer> featureLayer : featureIdxs) {
+      for (int i = 0; i < featureLayer.size(); i++) {
+        if (featureLayer.get(i).equals(-1)) {
+          featureLayer.set(i, 0);
         }
       }
     }

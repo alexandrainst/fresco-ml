@@ -1,9 +1,11 @@
 package dk.alexandra.fresco.ml.dtrees;
 
 import dk.alexandra.fresco.framework.DRes;
+import dk.alexandra.fresco.framework.MaliciousException;
 import dk.alexandra.fresco.framework.builder.Computation;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.util.Pair;
+import dk.alexandra.fresco.framework.value.OInt;
 import dk.alexandra.fresco.framework.value.SInt;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -16,18 +18,42 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
 
   private final DecisionTreeModelClosed treeModel;
   private final List<DRes<SInt>> featureVector;
+  private final int sampleParty;
 
   public EvaluateDecisionTree(
       DecisionTreeModelClosed treeModel,
-      List<DRes<SInt>> featureVector) {
+      List<DRes<SInt>> featureVector,
+      int sampleParty) {
     this.treeModel = treeModel;
     this.featureVector = featureVector;
+    this.sampleParty = sampleParty;
+  }
+
+  public EvaluateDecisionTree(DecisionTreeModelClosed treeModel,
+      List<DRes<SInt>> featureVector) {
+    this(treeModel, featureVector, 1);
   }
 
   @Override
   public DRes<SInt> buildComputation(ProtocolBuilderNumeric builder) {
-    // TODO zero check
     return builder.par(par -> {
+      List<List<DRes<SInt>>> featureIndexes = treeModel.getFeatureIndexes();
+      List<DRes<OInt>> checkedBits = new ArrayList<>(treeModel.getNumberInternalNodes());
+      for (List<DRes<SInt>> featureIndexBits : featureIndexes) {
+        checkedBits.add(par.seq(seq -> {
+          DRes<SInt> bit = seq.advancedNumeric().sum(featureIndexBits);
+          return seq.numeric().openAsOInt(bit, sampleParty);
+        }));
+      }
+      return () -> checkedBits;
+    }).par((par, checkedBits) -> {
+      if (par.getBasicNumericContext().getMyId() == sampleParty) {
+        for (DRes<OInt> checkBit : checkedBits) {
+          if (!par.getOIntArithmetic().isOne(checkBit.out())) {
+            throw new MaliciousException("Selection bits do not add up to one: " + checkBit.out());
+          }
+        }
+      }
       List<List<DRes<SInt>>> featureIndexes = treeModel.getFeatureIndexes();
       List<DRes<SInt>> selectedFeatures = new ArrayList<>(treeModel.getNumberInternalNodes());
       for (List<DRes<SInt>> featureIndex : featureIndexes) {
@@ -105,8 +131,7 @@ public class EvaluateDecisionTree implements Computation<SInt, ProtocolBuilderNu
                       parentNodeIdx - 1)) : lessThanFlags.get(parentNodeIdx - 1);
               // Then compute final indicator for the given leaf (category)
               DRes<SInt> finalIndicator = seq.logicalArithmetic()
-                  .and(parentIndicator, partialVal.get(
-                      parentNodeIdx - 1));
+                  .and(parentIndicator, partialVal.get(parentNodeIdx - 1));
               // Multiply indicator bit with category value
               return seq.numeric().mult(finalIndicator, treeModel.getCategories().get(finalI));
             });
