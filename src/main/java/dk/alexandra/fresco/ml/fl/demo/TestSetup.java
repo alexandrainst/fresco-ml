@@ -1,4 +1,4 @@
-package dk.alexandra.fresco.ml.fl;
+package dk.alexandra.fresco.ml.fl.demo;
 
 import dk.alexandra.fresco.framework.builder.ProtocolBuilder;
 import dk.alexandra.fresco.framework.network.CloseableNetwork;

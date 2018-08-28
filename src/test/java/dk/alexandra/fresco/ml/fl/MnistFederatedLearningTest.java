@@ -1,5 +1,6 @@
 package dk.alexandra.fresco.ml.fl;
 
+import dk.alexandra.fresco.ml.fl.demo.MnistTestContext;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,8 +8,6 @@ import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.junit.Test;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +38,8 @@ public class MnistFederatedLearningTest {
       iterators.add(train);
       MultiLayerNetwork model = new MultiLayerNetwork(context.getConf());
       model.init();
-      FlTrainerImpl trainer = new FlTrainerImpl(model, train, context.getLocalEpochs(), flHandler);
+      FlTrainerImpl trainer = new FlTrainerImpl(flHandler, model, train, context.getLocalEpochs(),
+          context.getLocalExamples());
       trainers.add(trainer);
     }
     log.info("Train model....");
@@ -50,13 +50,9 @@ public class MnistFederatedLearningTest {
     }
     DataSetIterator mnistTest = new MnistDataSetIterator(context.getBatchSize(), false,
         context.getSeed());
-    Evaluation evaluator = new Evaluation(MnistTestContext.NUM_CLASSES);
+
     log.info("Evaluate model ....");
-    while (mnistTest.hasNext()) {
-      DataSet next = mnistTest.next();
-      INDArray output = trainers.get(0).getModel().output(next.getFeatureMatrix());
-      evaluator.eval(next.getLabels(), output);
-    }
+    Evaluation evaluator = trainers.get(0).getModel().evaluate(mnistTest);
     log.info(evaluator.stats());
   }
 

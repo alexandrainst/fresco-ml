@@ -1,4 +1,4 @@
-package dk.alexandra.fresco.ml.fl;
+package dk.alexandra.fresco.ml.fl.demo;
 
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -21,8 +21,8 @@ public class MnistTestContext {
   public static final int DEFAULT_LAYER_SIZE = 200;
   public static final int DEFAULT_LOCAL_EXAMPLES = 600;
   public static final int DEFAULT_SEED = 123;
-  public static final int DEFAULT_LOCAL_EPOCHS = 1;
-  public static final int DEFAULT_GLOBAL_EPOCHS = 20;
+  public static final int DEFAULT_LOCAL_EPOCHS = 10;
+  public static final int DEFAULT_GLOBAL_EPOCHS = 10;
   public static final int DEFAULT_BATCHSIZE = 10;
   public static final int NUM_CLASSES = 10; // 10 digits
   public static final int NUM_MNIST_FEATURES = 28 * 28; // 28 x 28 pixel images
@@ -236,7 +236,7 @@ public class MnistTestContext {
       return this;
     }
 
-    MnistTestContext build() {
+    public MnistTestContext build() {
       context.createConf();
       return context;
     }
