@@ -24,9 +24,7 @@ import dk.alexandra.fresco.suite.spdz.storage.SpdzDummyDataSupplier;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import org.apache.commons.cli.CommandLine;
@@ -54,11 +52,13 @@ public class MpcFlMnistParty {
   private static Logger logger = LoggerFactory.getLogger(MpcFlMnistParty.class);
 
   public static void main(String[] args) throws IOException, ParseException {
+
     CmdLineOptionsParser optionsParser = new CmdLineOptionsParser(args);
     // Setup context for FL
     SpdzTestSetup setup = createSetup(optionsParser.getMyId(), optionsParser.getNumParties());
     MnistTestContext context = MnistTestContext.builder()
         .localExamples(optionsParser.getNumExamples()).build();
+
     FlTrainer trainer = buildFlTrainer(setup, context);
     trainAndEval(setup, context, trainer);
     setup.close();
@@ -107,6 +107,11 @@ public class MpcFlMnistParty {
         formatter.printHelp("", options);
         System.exit(1);
       }
+      System.out.println(
+          " ___ ___ ___ ___  ___ ___          ___ _       ___\n" +
+          "| __| _ \\ __/ __|/ __/ _ \\   ___  | __| |     |   \\ ___ _ __  ___\n" +
+          "| _||   / _|\\__ \\ (_| (_) | |___| | _|| |__   | |) / -_) '  \\/ _ \\\n" +
+          "|_| |_|_\\___|___/\\___\\___/        |_| |____|  |___/\\___|_|_|_\\___/");
     }
 
     private int getMyId() {
@@ -184,7 +189,6 @@ public class MpcFlMnistParty {
     DataSet data = it.next();
     data = data.filterBy(IntStream.range(0, 10).filter(i -> i != id).toArray());
     data = data.sample(examples);
-    System.out.println("Examples: " + data.numExamples());
     return new ExistingDataSetIterator(data.batchBy(batch));
   }
 
