@@ -1,9 +1,6 @@
 package dk.alexandra.fresco.ml;
 
-import dk.alexandra.fresco.lib.real.AdvancedRealNumeric;
-import dk.alexandra.fresco.lib.real.RealNumeric;
 import dk.alexandra.fresco.lib.real.SReal;
-import dk.alexandra.fresco.lib.real.fixed.SemiFixedNumeric;
 import dk.alexandra.fresco.framework.Application;
 import dk.alexandra.fresco.framework.DRes;
 import dk.alexandra.fresco.framework.TestThreadRunner.TestThread;
