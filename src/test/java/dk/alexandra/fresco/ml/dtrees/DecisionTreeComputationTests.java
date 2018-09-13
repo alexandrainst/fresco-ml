@@ -17,8 +17,7 @@ import org.junit.Assert;
 public class DecisionTreeComputationTests {
 
   private static Application<BigInteger, ProtocolBuilderNumeric> constructApp(
-      DecisionTreeModel treeModel,
-      List<BigInteger> featureVectorOpen) {
+      DecisionTreeModel treeModel, List<BigInteger> featureVectorOpen) {
     int treeInputPartyId = 1;
     int featureInputPartyId = 2;
     int featureVectorSize = featureVectorOpen.size();

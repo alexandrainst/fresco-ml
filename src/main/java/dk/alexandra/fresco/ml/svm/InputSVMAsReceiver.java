@@ -2,7 +2,6 @@ package dk.alexandra.fresco.ml.svm;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import dk.alexandra.fresco.framework.DRes;
 import dk.alexandra.fresco.framework.builder.ComputationParallel;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
@@ -13,12 +12,12 @@ public class InputSVMAsReceiver implements
 
   private final int features;
   private final int categories;
-  private final int receiverId;
+  private final int modelPartyId;
 
-  public InputSVMAsReceiver(int features, int categories, int receiverId) {
+  public InputSVMAsReceiver(int features, int categories, int modelPartyId) {
     this.features = features;
     this.categories = categories;
-    this.receiverId = receiverId;
+    this.modelPartyId = modelPartyId;
   }
 
   /**
@@ -27,7 +26,7 @@ public class InputSVMAsReceiver implements
   private List<DRes<SInt>> input(ProtocolBuilderNumeric builder, int numberOfValues) {
     List<DRes<SInt>> secrets = new ArrayList<>(numberOfValues);
     for (int i = 0; i < numberOfValues; i++) {
-      secrets.add(builder.numeric().input(null, receiverId));
+      secrets.add(builder.numeric().input(null, modelPartyId));
     }
     return secrets;
   }
@@ -38,7 +37,7 @@ public class InputSVMAsReceiver implements
     for (int i = 0; i < categories; i++) {
       supportVectorsClosed.add(input(builder, features));
     }
-    List<DRes<SInt>> biasClosed = new ArrayList<>(categories);
+    List<DRes<SInt>> biasClosed = input(builder, categories);
 
     SVMModelClosed closedModel = new SVMModelClosed(supportVectorsClosed, biasClosed);
     return () -> closedModel;

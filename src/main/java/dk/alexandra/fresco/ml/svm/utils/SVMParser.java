@@ -1,14 +1,15 @@
 package dk.alexandra.fresco.ml.svm.utils;
 
-import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+
 import dk.alexandra.fresco.ml.svm.SVMModel;
 
 public class SVMParser {
@@ -32,17 +33,16 @@ public class SVMParser {
    */
   public SVMModel parseFile(String fileName) {
     try {
-      FileReader fileReader = new FileReader(fileName);
-      BufferedReader reader = new BufferedReader(fileReader);
-      List<String> collection = reader.lines().filter(line -> !line.trim().isEmpty()).collect(
-          Collectors.toList());
-      fileReader.close();
+      CSVParser parser = CSVParser.parse(new File(fileName), Charset.defaultCharset(),
+          CSVFormat.DEFAULT);
+      List<CSVRecord> records = parser.getRecords();
+      parser.close();
       // The bias is stored in the first line
-      bias = parseLine(collection.get(0));
+      bias = parseLine(records.get(0));
       // The rest of the lines now contain the support vectors
-      collection.remove(0);
-      setSupportvectors(collection);
-      return makeSVMModel();
+      records.remove(0);
+      setSupportvectors(records);
+      return new SVMModel(supportVectors, bias, PRECISION);
 
     } catch (FileNotFoundException ex) {
       System.out.println("Unable to open file '" + fileName + "'");
@@ -52,55 +52,40 @@ public class SVMParser {
     return null;
   }
 
-  private List<Double> parseLine(String line) {
+  private List<Double> parseLine(CSVRecord line) {
     List<Double> res = new ArrayList<>();
-    line = line.trim();
-    int currentIndex = 0;
-    while (line.indexOf(',', currentIndex) >= 0) {
-      int valueEnd = line.indexOf(',', currentIndex);
-      String substring = line.substring(currentIndex, valueEnd);
-      res.add(Double.parseDouble(substring.trim()));
-      currentIndex = valueEnd + 1;
+    for (String val : line) {
+      res.add(Double.parseDouble(val));
     }
-    // Add the last value
-    String substring = line.substring(currentIndex);
-    res.add(Double.parseDouble(substring.trim()));
     return res;
   }
 
-  private void setSupportvectors(List<String> inputLines) {
+  private void setSupportvectors(List<CSVRecord> inputLines) {
     supportVectors = new ArrayList<>();
-    for (String currentLine : inputLines) {
+    for (CSVRecord currentLine : inputLines) {
       supportVectors.add(parseLine(currentLine));
     }
   }
 
-  private SVMModel makeSVMModel() {
-    List<BigInteger> bigBias = new ArrayList<>(bias.size());
-    for (Double currentDouble : bias) {
-      bigBias.add(convertToBigInteger(currentDouble));
-    }
+  // private SVMModel makeSVMModel() {
+  // List<BigInteger> bigBias = new ArrayList<>(bias.size());
+  // for (Double currentDouble : bias) {
+  // // We must multiply the bias with PRECISION again since the inner products have been shifted
+  // // by precision twice as they consist of the sum of the product of shifted values
+  // bigBias.add(convertToBigInteger(currentDouble).multiply(BigInteger.valueOf(PRECISION)));
+  // }
+  //
+  // List<List<BigInteger>> bigSupportvectors = new ArrayList<>(supportVectors.size());
+  // for (List<Double> currentVector : supportVectors) {
+  // List<BigInteger> currentBigVector = new ArrayList<>(currentVector.size());
+  // for (Double currentDouble : currentVector) {
+  // currentBigVector.add(convertToBigInteger(currentDouble));
+  // }
+  // bigSupportvectors.add(currentBigVector);
+  // }
+  // return new SVMModel(bigSupportvectors, bigBias);
+  // }
 
-    List<List<BigInteger>> bigSupportvectors = new ArrayList<>(supportVectors.size());
-    for (List<Double> currentVector : supportVectors) {
-      List<BigInteger> currentBigVector = new ArrayList<>(currentVector.size());
-      for (Double currentDouble : currentVector) {
-        currentBigVector.add(convertToBigInteger(currentDouble));
-      }
-      bigSupportvectors.add(currentBigVector);
-    }
-
-    return new SVMModel(bigSupportvectors, bigBias);
-  }
-
-  private BigInteger convertToBigInteger(Double input) {
-    // We use BigDecimal to avoid loss of precision when converting to integer
-    BigDecimal currentBigDouble = new BigDecimal(input);
-    // "Shift" to become an "integer"
-    currentBigDouble = currentBigDouble.multiply(new BigDecimal(PRECISION));
-    // Round down to integer
-    return currentBigDouble.toBigInteger();
-  }
 
   public static void main(String args[]) {
     SVMParser parser = new SVMParser(1);

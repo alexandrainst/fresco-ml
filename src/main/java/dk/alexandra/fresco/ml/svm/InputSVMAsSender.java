@@ -34,12 +34,11 @@ public class InputSVMAsSender implements
   public DRes<SVMModelClosed> buildComputation(ProtocolBuilderNumeric builder) {
     List<List<BigInteger>> supportVectors = model.getSupportVectors();
     List<BigInteger> bias = model.getBias();
-
     List<List<DRes<SInt>>> supportVectorsClosed = new ArrayList<>(supportVectors.size());
     for (List<BigInteger> supportVector : supportVectors) {
       supportVectorsClosed.add(input(builder, supportVector));
     }
-    List<DRes<SInt>> biasClosed = new ArrayList<>(bias.size());
+    List<DRes<SInt>> biasClosed = input(builder, bias);
 
     SVMModelClosed closedModel = new SVMModelClosed(supportVectorsClosed, biasClosed);
     return () -> closedModel;
