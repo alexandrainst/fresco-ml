@@ -4,10 +4,10 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.framework.DRes;
 import dk.alexandra.fresco.framework.builder.Computation;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
-import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.framework.value.SInt;
 import dk.alexandra.fresco.lib.math.integer.min.Minimum;
 
@@ -29,7 +29,7 @@ public class EvaluateSVM implements Computation<SInt, ProtocolBuilderNumeric> {
 
   @Override
   public DRes<SInt> buildComputation(ProtocolBuilderNumeric builder) {
-    return builder.par(par -> {
+    return builder.seq(par -> {
       List<List<DRes<SInt>>> supportVectors = model.getSupportVectors();
       List<DRes<SInt>> products = new ArrayList<>(supportVectors.size());
       for (int i = 0; i < supportVectors.size(); i++) {
@@ -52,6 +52,8 @@ public class EvaluateSVM implements Computation<SInt, ProtocolBuilderNumeric> {
       DRes<Pair<List<DRes<SInt>>, SInt>> min = par.seq(new Minimum(products));
       return () -> min.out().getSecond();
     });
+
+
     // }).whileLoop(pair -> pair.getSecond() < pair.getFirst().size(), (prevPar, pair) ->
     // prevPar.par(
     // par -> {

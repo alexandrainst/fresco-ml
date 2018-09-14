@@ -78,6 +78,7 @@ public class SVMComputationTests {
           for (List<BigInteger> currentInputVectorOpen : inputVectorsOpen) {
             BigInteger actual = runApplication(constructApp(model, currentInputVectorOpen));
             PlainEvaluator evaluator = new PlainEvaluator(model);
+            System.out.println("res is " + actual.intValue());
             // int expected = evaluator.evaluate(currentInputVectorOpen);
             // Assert.assertEquals(BigInteger.valueOf(expected), actual);
           }
