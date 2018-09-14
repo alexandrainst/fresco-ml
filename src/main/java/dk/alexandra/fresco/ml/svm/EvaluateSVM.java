@@ -33,8 +33,13 @@ public class EvaluateSVM implements Computation<SInt, ProtocolBuilderNumeric> {
       List<List<DRes<SInt>>> supportVectors = model.getSupportVectors();
       List<DRes<SInt>> products = new ArrayList<>(supportVectors.size());
       for (int i = 0; i < supportVectors.size(); i++) {
-        DRes<SInt> temp = par.advancedNumeric().innerProduct(supportVectors.get(i), featureVector);
-        products.add(par.numeric().add(temp, model.getBias().get(i)));
+        int finalI = i;
+        final DRes<SInt> prod = par.seq(seq -> {
+          DRes<SInt> temp = seq.advancedNumeric()
+              .innerProduct(supportVectors.get(finalI), featureVector);
+          return seq.numeric().add(temp, model.getBias().get(finalI));
+        });
+        products.add(prod);
       }
       return () -> products;
     }).par((par, products) -> {
