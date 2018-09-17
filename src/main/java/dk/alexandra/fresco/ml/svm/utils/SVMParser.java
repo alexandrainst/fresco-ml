@@ -17,14 +17,15 @@ import org.apache.commons.csv.CSVRecord;
 import dk.alexandra.fresco.ml.svm.SVMModel;
 
 public class SVMParser {
-  // Multiply weights by this number and round to nearest integer
-  private int precision;
+  // Multiply weights by this number and round to nearest integer; this is how we convert from
+  // decimal numbers to integers
+  private int scaling;
 
   private List<Double> bias;
   private List<List<Double>> supportVectors;
 
   public SVMParser(int precision) {
-    this.precision = precision;
+    this.scaling = precision;
   }
 
   /**
@@ -46,7 +47,7 @@ public class SVMParser {
       // The rest of the lines now contain the support vectors
       records.remove(0);
       setSupportvectors(records);
-      return new SVMModel(supportVectors, bias, precision);
+      return new SVMModel(supportVectors, bias, scaling);
 
     } catch (FileNotFoundException ex) {
       System.out.println("Unable to open file '" + fileName + "'");
@@ -56,8 +57,16 @@ public class SVMParser {
     return null;
   }
 
+  /**
+   * Turn a list of double into a list of BigIntegers as the secure evaluation requires. The doubles
+   * get converted by first multiplying with the scaling factor and then rounded down.
+   *
+   * @param input
+   *          The vector to convert
+   * @return The converted vector
+   */
   public List<BigInteger> parseFeaturesFromDouble(List<Double> input) {
-    return input.stream().map(val -> new BigDecimal(val).multiply(new BigDecimal(precision))
+    return input.stream().map(val -> new BigDecimal(val).multiply(new BigDecimal(scaling))
         .toBigInteger()).collect(Collectors.toList());
   }
 
