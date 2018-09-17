@@ -44,23 +44,6 @@ public class SVMModel {
     this.bias = bigBias;
   }
 
-  // public SVMModel(List<List<BigInteger>> supportVectors, List<BigInteger> bias) {
-  // this.supportVectors = supportVectors;
-  // this.bias = bias;
-  //
-  // if (supportVectors.size() != bias.size()) {
-  // throw new IllegalArgumentException("The amount of bias and support vectors is not the same");
-  // }
-  //
-  // int size = supportVectors.get(0).size();
-  // for (List<BigInteger> currentVector : supportVectors) {
-  // if (size != currentVector.size()) {
-  // throw new IllegalArgumentException(
-  // "The amount of featues is not the same for all support vectors");
-  // }
-  // }
-  // }
-
   public BigInteger convertToBigInteger(Double input) {
     // We use BigDecimal to avoid loss of precision when converting to integer
     BigDecimal currentBigDouble = new BigDecimal(input);

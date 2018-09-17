@@ -18,7 +18,7 @@ public class TestSVMParser {
     SVMParser parser = new SVMParser(1000000);
     String filename = getClass().getClassLoader().getResource("svms/models/cifarTest.csv")
         .getFile();
-    model = parser.parseFile(filename);
+    model = parser.parseModelFromFile(filename);
   }
 
   @Test
@@ -29,8 +29,9 @@ public class TestSVMParser {
 
   @Test
   public void testBias() {
-    assertEquals(new BigInteger("-5462631"), model.getBias().get(0));
-    assertEquals(new BigInteger("1034298"), model.getBias().get(3));
+    // Note that bias must be multiplied twice with the multiplicative shift
+    assertEquals(new BigInteger("-5462631000000"), model.getBias().get(0));
+    assertEquals(new BigInteger("1034298000000"), model.getBias().get(3));
   }
 
   @Test

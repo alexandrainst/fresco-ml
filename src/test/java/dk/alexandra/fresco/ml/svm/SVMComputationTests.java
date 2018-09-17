@@ -2,15 +2,17 @@ package dk.alexandra.fresco.ml.svm;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.junit.Assert;
+
 import dk.alexandra.fresco.framework.Application;
 import dk.alexandra.fresco.framework.DRes;
 import dk.alexandra.fresco.framework.TestThreadRunner.TestThread;
@@ -59,59 +61,53 @@ public class SVMComputationTests {
         @Override
         public void test() throws IOException {
           int precision = 1000000;
-          String filename = getClass().getClassLoader().getResource("svms/models/cifar2048.csv")
+          String modelFilename = getClass().getClassLoader().getResource(
+              "svms/models/cifar2048.csv")
               .getFile();
-          SVMParser parser = new SVMParser(precision);
-          SVMModel model = parser.parseFile(filename);
+          SVMParser svmParser = new SVMParser(precision);
+          SVMModel model = svmParser.parseModelFromFile(modelFilename);
 
-          filename = getClass().getClassLoader().getResource("svms/models/smallcifar2048-test.csv")
+          String testFilename = getClass().getClassLoader().getResource(
+              "svms/models/smallcifar2048-test.csv")
               .getFile();
-          CSVParser testParser = CSVParser.parse(new File(filename), Charset.defaultCharset(),
+          CSVParser testParser = CSVParser.parse(new File(testFilename), Charset.defaultCharset(),
               CSVFormat.DEFAULT);
           List<CSVRecord> records = testParser.getRecords();
           testParser.close();
-          // Remove the true values
+          // Remove the true values as they are the first line in the file
           records.remove(0);
-          // List<BigInteger> expectedValues = CSVToBigInteger(records.remove(0), precision);
-          List<List<BigInteger>> inputVectorsOpen = CSVListToBigInteger(records, precision);
+          List<List<Double>> inputValues = CSVListToDouble(records);
 
-          for (List<BigInteger> currentInputVectorOpen : inputVectorsOpen) {
-            BigInteger actual = runApplication(constructApp(model, currentInputVectorOpen));
-            PlainEvaluator evaluator = new PlainEvaluator(model);
-            System.out.println("res is " + actual.intValue());
-            // int expected = evaluator.evaluate(currentInputVectorOpen);
-            // Assert.assertEquals(BigInteger.valueOf(expected), actual);
+          CSVParser csvParser = CSVParser.parse(new File(modelFilename), Charset.defaultCharset(),
+              CSVFormat.DEFAULT);
+          List<CSVRecord> modelRecords = csvParser.getRecords();
+          csvParser.close();
+          // The first line contains the bias
+          List<Double> biasList = PlainEvaluator.CSVToDouble(modelRecords.get(0));
+          // Remove the first line, which is the bias
+          modelRecords.remove(0);
+          List<List<Double>> modelList = PlainEvaluator.CSVListToDouble(modelRecords);
+          PlainEvaluator eval = new PlainEvaluator(modelList, biasList);
+
+          for (List<Double> current : inputValues) {
+            List<BigInteger> openFeatures = svmParser.parseFeaturesFromDouble(current);
+            BigInteger actual = runApplication(constructApp(model, openFeatures));
+
+            int expected = eval.evaluate(current);
+            Assert.assertEquals(BigInteger.valueOf(expected), actual);
           }
         }
       };
     }
 
-    private static List<List<BigDecimal>> CSVListToBigDecimal(List<CSVRecord> records) {
-      List<List<BigDecimal>> res = new ArrayList<List<BigDecimal>>(records.size());
-      for (int i = 0; i < records.size(); i++) {
-        List<BigDecimal> currentList = new ArrayList<>();
-        for (int j = 0; j < records.get(i).size(); j++) {
-          currentList.add(new BigDecimal(records.get(i).get(j)));
-        }
-        res.add(currentList);
-      }
-      return res;
+    private static List<List<Double>> CSVListToDouble(List<CSVRecord> records) {
+      return records.stream().map(record -> CSVToDouble(record)).collect(Collectors.toList());
     }
 
-    private static List<List<BigInteger>> CSVListToBigInteger(List<CSVRecord> records,
-        int precision) {
-      List<List<BigInteger>> res = new ArrayList<List<BigInteger>>(records.size());
-      for (int i = 0; i < records.size(); i++) {
-        res.add(CSVToBigInteger(records.get(i), precision));
-      }
-      return res;
-    }
-
-    private static List<BigInteger> CSVToBigInteger(CSVRecord record, int precision) {
-      List<BigInteger> res = new ArrayList<>(record.size());
+    private static List<Double> CSVToDouble(CSVRecord record) {
+      List<Double> res = new ArrayList<>(record.size());
       for (int j = 0; j < record.size(); j++) {
-        BigDecimal currentVal = new BigDecimal(record.get(j));
-        res.add(currentVal.multiply(new BigDecimal(precision)).toBigInteger());
+        res.add(new Double(record.get(j)));
       }
       return res;
     }

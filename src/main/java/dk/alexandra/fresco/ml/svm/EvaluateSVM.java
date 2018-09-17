@@ -15,17 +15,10 @@ import dk.alexandra.fresco.lib.math.integer.min.Minimum;
 public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumeric> {
   private final SVMModelClosed model;
   private final List<DRes<SInt>> featureVector;
-  private final int sampleParty;
-
-  public EvaluateSVM(SVMModelClosed model, List<DRes<SInt>> featureVector,
-      int sampleParty) {
-    this.model = model;
-    this.featureVector = featureVector;
-    this.sampleParty = sampleParty;
-  }
 
   public EvaluateSVM(SVMModelClosed model, List<DRes<SInt>> featureVector) {
-    this(model, featureVector, 1);
+    this.model = model;
+    this.featureVector = featureVector;
   }
 
   @Override
@@ -80,34 +73,5 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
       return list.stream().filter(val -> !val.out().equals(BigInteger.ZERO)).findFirst().orElse(
           null);
     });
-
-
-    // }).whileLoop(pair -> pair.getSecond() < pair.getFirst().size(), (prevPar, pair) ->
-    // prevPar.par(
-    // par -> {
-    // List<DRes<SInt>> products = pair.getFirst();
-    // int offset = pair.getSecond();
-    // for (int i = 0; i + offset < products.size(); i = i + 2 * offset) {
-    // int leftPointer = i;
-    // int rightPointer = i + offset;
-    // for (int j = i; j < start + 2 * offset; j++) {
-    // DRes<SInt> flag = par.comparison().compareLT(products.get(leftPointer), products.get(
-    // rightPointer));
-    // DRes<SInt> notFlag = par.logicalArithmetic().not(flag);
-    // // Swap if needed
-    // // First compute the new "left" element
-    // DRes<SInt> temp1 = par.numeric().mult(flag, products.get(leftPointer));
-    // DRes<SInt> temp2 = par.numeric().mult(notFlag, products.get(rightPointer));
-    // DRes<SInt> leftElement = par.numeric().add(temp1, temp2);
-    // // Compute the new "right" element
-    // temp1 = par.numeric().mult(notFlag, products.get(j));
-    // temp2 = par.numeric().mult(flag, products.get(j + offset));
-    // DRes<SInt> rightElement = par.numeric().add(temp1, temp2);
-    // products.set(j, leftElement);
-    // products.set(j + offset, rightElement);
-    // }
-    // }
-    // return () -> new Pair<List<DRes<SInt>>, Integer>(products, 2 * pair.getSecond());
-    // }));
   }
 }
