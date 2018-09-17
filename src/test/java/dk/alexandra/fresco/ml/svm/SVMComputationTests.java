@@ -44,8 +44,8 @@ public class SVMComputationTests {
       return root.seq(seq -> {
         SVMModelClosed model = closedModelD.out();
         List<DRes<SInt>> inputData = dataVectorD.out();
-        DRes<SInt> category = seq.seq(new EvaluateSVM(model, inputData));
-        return seq.numeric().open(category);
+        DRes<BigInteger> category = seq.seq(new EvaluateSVM(model, inputData));
+        return category;
       });
     };
   }
