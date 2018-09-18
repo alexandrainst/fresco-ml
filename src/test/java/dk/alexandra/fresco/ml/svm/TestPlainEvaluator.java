@@ -45,8 +45,8 @@ public class TestPlainEvaluator {
         CSVFormat.DEFAULT);
     List<CSVRecord> modelRecords = csvParser.getRecords();
     csvParser.close();
-    // Last record of the first line is the bias
-    double bias = new Double(modelRecords.get(0).get(modelRecords.get(0).size() - 1));
+    // First record contains the bias
+    double bias = new Double(modelRecords.remove(0).get(0));
     List<Double> biasList = new ArrayList<>();
     biasList.add(bias);
     PlainEvaluator eval = new PlainEvaluator(PlainEvaluator.CSVListToDouble(modelRecords),

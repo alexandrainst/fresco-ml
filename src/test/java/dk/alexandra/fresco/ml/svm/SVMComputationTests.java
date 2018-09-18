@@ -52,24 +52,19 @@ public class SVMComputationTests {
     };
   }
 
+
+
   public static class TestEvaluateSVM<ResourcePoolT extends ResourcePool> extends
       TestThreadFactory<ResourcePoolT, ProtocolBuilderNumeric> {
 
     @Override
     public TestThread<ResourcePoolT, ProtocolBuilderNumeric> next() {
       return new TestThread<ResourcePoolT, ProtocolBuilderNumeric>() {
-        @Override
-        public void test() throws IOException {
-          int precision = 1000000;
-          String modelFilename = getClass().getClassLoader().getResource(
-              "svms/models/cifar2048.csv")
-              .getFile();
-          SVMParser svmParser = new SVMParser(precision);
+        private void testFiles(String modelFilename, String testFilename, int scaling)
+            throws IOException {
+          SVMParser svmParser = new SVMParser(scaling);
           SVMModel model = svmParser.parseModelFromFile(modelFilename);
 
-          String testFilename = getClass().getClassLoader().getResource(
-              "svms/models/smallcifar2048-test.csv")
-              .getFile();
           CSVParser testParser = CSVParser.parse(new File(testFilename), Charset.defaultCharset(),
               CSVFormat.DEFAULT);
           List<CSVRecord> records = testParser.getRecords();
@@ -97,19 +92,35 @@ public class SVMComputationTests {
             Assert.assertEquals(BigInteger.valueOf(expected), actual);
           }
         }
+
+        private List<List<Double>> CSVListToDouble(List<CSVRecord> records) {
+          return records.stream().map(record -> CSVToDouble(record)).collect(Collectors.toList());
+        }
+
+        private List<Double> CSVToDouble(CSVRecord record) {
+          List<Double> res = new ArrayList<>(record.size());
+          for (int j = 0; j < record.size(); j++) {
+            res.add(new Double(record.get(j)));
+          }
+          return res;
+        }
+
+        @Override
+        public void test() throws IOException {
+          String modelFilename, testFilename;
+          modelFilename = getClass().getClassLoader().getResource(
+              "svms/models/cifar2048.csv").getFile();
+          testFilename = getClass().getClassLoader().getResource(
+              "svms/models/smallcifar2048-test.csv").getFile();
+          testFiles(modelFilename, testFilename, 1000000);
+
+          modelFilename = getClass().getClassLoader().getResource(
+              "svms/models/mit2048.csv").getFile();
+          testFilename = getClass().getClassLoader().getResource(
+              "svms/models/smallmit2048-test.csv").getFile();
+          testFiles(modelFilename, testFilename, 1000000);
+        }
       };
-    }
-
-    private static List<List<Double>> CSVListToDouble(List<CSVRecord> records) {
-      return records.stream().map(record -> CSVToDouble(record)).collect(Collectors.toList());
-    }
-
-    private static List<Double> CSVToDouble(CSVRecord record) {
-      List<Double> res = new ArrayList<>(record.size());
-      for (int j = 0; j < record.size(); j++) {
-        res.add(new Double(record.get(j)));
-      }
-      return res;
     }
   }
 }
