@@ -113,12 +113,12 @@ public class SVMComputationTests {
           testFilename = getClass().getClassLoader().getResource(
               "svms/models/smallcifar2048-test.csv").getFile();
           testFiles(modelFilename, testFilename, 1000000);
-
-          modelFilename = getClass().getClassLoader().getResource(
-              "svms/models/mit2048.csv").getFile();
-          testFilename = getClass().getClassLoader().getResource(
-              "svms/models/smallmit2048-test.csv").getFile();
-          testFiles(modelFilename, testFilename, 1000000);
+          
+//          modelFilename = getClass().getClassLoader().getResource(
+//              "svms/models/mit2048.csv").getFile();
+//          testFilename = getClass().getClassLoader().getResource(
+//              "svms/models/smallmit2048-test.csv").getFile();
+//          testFiles(modelFilename, testFilename, 1000000);
         }
       };
     }

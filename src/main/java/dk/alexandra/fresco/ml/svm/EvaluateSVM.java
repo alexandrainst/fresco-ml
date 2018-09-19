@@ -1,18 +1,17 @@
 package dk.alexandra.fresco.ml.svm;
 
+import dk.alexandra.fresco.framework.DRes;
+import dk.alexandra.fresco.framework.builder.Computation;
+import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.framework.util.Pair;
+import dk.alexandra.fresco.framework.value.SInt;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import dk.alexandra.fresco.framework.util.Pair;
-import dk.alexandra.fresco.framework.DRes;
-import dk.alexandra.fresco.framework.builder.Computation;
-import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
-import dk.alexandra.fresco.framework.value.SInt;
-import dk.alexandra.fresco.lib.math.integer.min.Minimum;
-
 public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumeric> {
+
   private final SVMModelClosed model;
   private final List<DRes<SInt>> featureVector;
 
@@ -38,7 +37,7 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
       }
       return () -> products;
     }).par((par, products) -> {
-      /**
+      /*
        * Compute half of the bitlength (i.e. max positive value) and subtract the actual integer
        * this ensure that the negative numbers get mapped to the lower integer, the positive to the
        * upper and that min actually computed max
@@ -49,7 +48,7 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
       }
       return () -> products;
     }).par((par, products) -> {
-      DRes<Pair<List<DRes<SInt>>, SInt>> min = par.seq(new Minimum(products));
+      DRes<Pair<List<DRes<SInt>>, SInt>> min = par.comparison().argMin(products);
       // The list is a bitvector indicating whether the value of the particular index is the minimum
       // number in the entire list
       return () -> min.out().getFirst();
@@ -57,7 +56,7 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
       List<DRes<SInt>> resultList = new ArrayList<>(indexIndicators.size());
       // Multiply each indicator variable with its index to get one non-zero value in the list,
       // which is the result of the entire computation
-      for (int i = 0; i< indexIndicators.size(); i++) {
+      for (int i = 0; i < indexIndicators.size(); i++) {
         DRes<SInt> adjustedIndicator = par.numeric().mult(BigInteger.valueOf(i), indexIndicators
             .get(i));
         resultList.add(adjustedIndicator);
@@ -66,7 +65,7 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
     }).par((par, indexIndicators) -> {
       List<DRes<BigInteger>> res = indexIndicators.stream().map(val -> par.numeric().open(val))
           .collect(Collectors
-          .toList());
+              .toList());
       return () -> res;
     }).seq((seq, list) -> {
       // Return the single value in the list which is not zero
