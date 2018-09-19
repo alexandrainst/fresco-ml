@@ -42,9 +42,10 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
        * this ensure that the negative numbers get mapped to the lower integer, the positive to the
        * upper and that min actually computed max
        */
-      BigInteger halfSize = BigInteger.ONE.pow(par.getBasicNumericContext().getMaxBitLength() - 1);
+      final int k = par.getBasicNumericContext().getMaxBitLength() - 1;
       for (int i = 0; i < products.size(); i++) {
-        products.set(i, par.numeric().sub(halfSize, products.get(i)));
+        products.set(i, par.numeric().subFromOpen(par.getOIntArithmetic().twoTo(k),
+            products.get(i)));
       }
       return () -> products;
     }).par((par, products) -> par.comparison().argMin(products))
