@@ -16,7 +16,7 @@ import dk.alexandra.fresco.suite.spdz2k.resource.storage.Spdz2kOpenedValueStoreI
 import java.util.function.Supplier;
 import org.junit.Test;
 
-public class TestSVMComputationsSpdz2k extends
+public class TestSVMComputationsSpdz2k128 extends
     AbstractSpdz2kTest<Spdz2kResourcePool<CompUInt128>> {
 
   @Test

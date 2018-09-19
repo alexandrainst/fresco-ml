@@ -3,12 +3,12 @@ package dk.alexandra.fresco.ml.svm;
 import dk.alexandra.fresco.framework.DRes;
 import dk.alexandra.fresco.framework.builder.Computation;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
-import dk.alexandra.fresco.framework.util.Pair;
+import dk.alexandra.fresco.framework.value.OInt;
+import dk.alexandra.fresco.framework.value.OIntArithmetic;
 import dk.alexandra.fresco.framework.value.SInt;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumeric> {
 
@@ -47,30 +47,23 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
         products.set(i, par.numeric().sub(halfSize, products.get(i)));
       }
       return () -> products;
-    }).par((par, products) -> {
-      DRes<Pair<List<DRes<SInt>>, SInt>> min = par.comparison().argMin(products);
-      // The list is a bitvector indicating whether the value of the particular index is the minimum
-      // number in the entire list
-      return () -> min.out().getFirst();
-    }).par((par, indexIndicators) -> {
-      List<DRes<SInt>> resultList = new ArrayList<>(indexIndicators.size());
-      // Multiply each indicator variable with its index to get one non-zero value in the list,
-      // which is the result of the entire computation
-      for (int i = 0; i < indexIndicators.size(); i++) {
-        DRes<SInt> adjustedIndicator = par.numeric().mult(BigInteger.valueOf(i), indexIndicators
-            .get(i));
-        resultList.add(adjustedIndicator);
-      }
-      return () -> resultList;
-    }).par((par, indexIndicators) -> {
-      List<DRes<BigInteger>> res = indexIndicators.stream().map(val -> par.numeric().open(val))
-          .collect(Collectors
-              .toList());
-      return () -> res;
-    }).seq((seq, list) -> {
-      // Return the single value in the list which is not zero
-      return list.stream().filter(val -> !val.out().equals(BigInteger.ZERO)).findFirst().orElse(
-          null);
-    });
+    }).par((par, products) -> par.comparison().argMin(products))
+        .par((par, argMin) -> {
+          List<DRes<SInt>> indexIndicators = argMin.getFirst();
+          List<DRes<OInt>> opened = new ArrayList<>(indexIndicators.size());
+          for (DRes<SInt> indexIndicator : indexIndicators) {
+            opened.add(par.numeric().openAsOInt(indexIndicator));
+          }
+          return () -> opened;
+        }).par((par, indexIndicators) -> {
+          OIntArithmetic ar = par.getOIntArithmetic();
+          for (int i = 0; i < indexIndicators.size(); i++) {
+            if (ar.isOne(indexIndicators.get(i).out())) {
+              BigInteger index = BigInteger.valueOf(i);
+              return () -> index;
+            }
+          }
+          throw new IllegalStateException("Index not found!");
+        });
   }
 }
