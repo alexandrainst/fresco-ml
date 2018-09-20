@@ -37,15 +37,10 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
       }
       return () -> products;
     }).par((par, products) -> {
-      /*
-       * Compute half of the bitlength (i.e. max positive value) and subtract the actual integer
-       * this ensure that the negative numbers get mapped to the lower integer, the positive to the
-       * upper and that min actually computed max
-       */
-      final int k = par.getBasicNumericContext().getMaxBitLength() - 1;
+      // Negate to have argmin work as argmax.
+      final OInt zero = par.getOIntFactory().zero();
       for (int i = 0; i < products.size(); i++) {
-        products.set(i, par.numeric().subFromOpen(par.getOIntArithmetic().twoTo(k),
-            products.get(i)));
+        products.set(i, par.numeric().subFromOpen(zero, products.get(i)));
       }
       return () -> products;
     }).par((par, products) -> par.comparison().argMin(products))

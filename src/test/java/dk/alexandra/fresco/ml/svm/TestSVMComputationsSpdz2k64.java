@@ -1,6 +1,7 @@
 package dk.alexandra.fresco.ml.svm;
 
 import dk.alexandra.fresco.framework.network.Network;
+import dk.alexandra.fresco.framework.sce.evaluator.EvaluationStrategy;
 import dk.alexandra.fresco.framework.util.AesCtrDrbg;
 import dk.alexandra.fresco.suite.ProtocolSuiteNumeric;
 import dk.alexandra.fresco.suite.spdz2k.AbstractSpdz2kTest;
@@ -13,15 +14,16 @@ import dk.alexandra.fresco.suite.spdz2k.resource.Spdz2kResourcePoolImpl;
 import dk.alexandra.fresco.suite.spdz2k.resource.storage.Spdz2kDummyDataSupplier;
 import dk.alexandra.fresco.suite.spdz2k.resource.storage.Spdz2kOpenedValueStoreImpl;
 import java.util.function.Supplier;
+import org.junit.Test;
 
 public class TestSVMComputationsSpdz2k64 extends
     AbstractSpdz2kTest<Spdz2kResourcePool<CompUInt64>> {
 
-//  @Test
-//  public void testEvaluateSVM() {
-//    runTest(new SVMComputationTests.TestEvaluateSVM<>(), EvaluationStrategy.SEQUENTIAL_BATCHED,
-//        2);
-//  }
+  @Test
+  public void testEvaluateSVM() {
+    runTest(new SVMComputationTests.TestEvaluateSVM<>(), EvaluationStrategy.SEQUENTIAL_BATCHED,
+        2);
+  }
 
   @Override
   protected Spdz2kResourcePool<CompUInt64> createResourcePool(int playerId, int noOfParties,
