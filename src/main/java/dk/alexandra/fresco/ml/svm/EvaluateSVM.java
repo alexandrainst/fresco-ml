@@ -25,22 +25,18 @@ public class EvaluateSVM implements Computation<BigInteger, ProtocolBuilderNumer
     return builder.par(par -> {
       List<List<DRes<SInt>>> supportVectors = model.getSupportVectors();
       List<DRes<SInt>> products = new ArrayList<>(supportVectors.size());
+      final OInt zero = par.getOIntFactory().zero();
       // Compute the inner product of the each of the support vectors with the feature vector
       for (int i = 0; i < supportVectors.size(); i++) {
         int finalI = i;
         final DRes<SInt> prod = par.seq(seq -> {
-          DRes<SInt> temp = seq.advancedNumeric()
-              .innerProduct(supportVectors.get(finalI), featureVector);
-          return seq.numeric().add(temp, model.getBias().get(finalI));
+          DRes<SInt> temp = seq.advancedNumeric().innerProduct(
+              supportVectors.get(finalI), featureVector);
+          final DRes<SInt> sum = seq.numeric().add(temp, model.getBias().get(finalI));
+          // Negate to have argmin work as argmax.
+          return seq.numeric().subFromOpen(zero, sum);
         });
         products.add(prod);
-      }
-      return () -> products;
-    }).par((par, products) -> {
-      // Negate to have argmin work as argmax.
-      final OInt zero = par.getOIntFactory().zero();
-      for (int i = 0; i < products.size(); i++) {
-        products.set(i, par.numeric().subFromOpen(zero, products.get(i)));
       }
       return () -> products;
     }).par((par, products) -> par.comparison().argMin(products))
