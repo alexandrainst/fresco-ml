@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -62,7 +63,7 @@ public class DTreeParser {
       List<String> collection = reader.lines().filter(line -> !line.trim().isEmpty()).collect(
           Collectors.toList());
       fileReader.close();
-      setFeatures(collection.stream());
+      setFeatures(collection);
       setCategories(collection.stream());
       setDepth(collection);
       constructTree(collection);
@@ -144,7 +145,7 @@ public class DTreeParser {
   }
 
   private void constructTree(List<String> list) {
-    numOriginalFeatures = Integer.parseInt(list.get(0));
+    // numOriginalFeatures = Integer.parseInt(list.get(0));
     featureIdxs = new ArrayList<>();
     weightsIdxs = new ArrayList<>();
     categoriesIdxs = new ArrayList<>();
@@ -225,18 +226,23 @@ public class DTreeParser {
     depth = (int) Math.ceil(Math.log(maxNode) / Math.log(2));
   }
 
-  private void setFeatures(Stream<String> stream) {
+  private void setFeatures(List<String> list) {
     features = new ArrayList<>();
-    // Skip the first meta lines and an extra since we want to skip the root as well
-    stream.skip(META_LINES + 1).forEach(line -> {
-      Pair<String, Boolean> featurePair = getFeature(line);
-      String feature = featurePair.getFirst();
-      // Go to next line if we have already added the feature
-      if (!features.contains(feature)) {
-        // The number we will associate with the feature
-        features.add(feature);
-      }
-    });
+    String featureString = list.get(0).replace("\"", "");
+    features = Arrays.asList(featureString.split(","));
+    Collections.sort(features);
+    numOriginalFeatures = features.size();
+
+    // // Skip the first meta lines and an extra since we want to skip the root as well
+    // list.stream().skip(META_LINES + 1).forEach(line -> {
+    // Pair<String, Boolean> featurePair = getFeature(line);
+    // String feature = featurePair.getFirst();
+    // // Go to next line if we have already added the feature
+    // if (!features.contains(feature)) {
+    // // The number we will associate with the feature
+    // features.add(feature);
+    // }
+    // });
     // Sort the list alphabetically to be sure that the order of attributes does not leak info on the tree
     features.sort(null);
   }

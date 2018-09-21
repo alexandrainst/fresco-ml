@@ -70,7 +70,7 @@ public class SVMComputationTests {
           List<CSVRecord> records = testParser.getRecords();
           testParser.close();
           // Remove the true values as they are the first line in the file
-          records.remove(0);
+          CSVRecord trueValues = records.remove(0);
           List<List<Double>> inputValues = CSVListToDouble(records);
 
           CSVParser csvParser = CSVParser.parse(new File(modelFilename), Charset.defaultCharset(),
@@ -84,13 +84,25 @@ public class SVMComputationTests {
           List<List<Double>> modelList = PlainEvaluator.CSVListToDouble(modelRecords);
           PlainEvaluator eval = new PlainEvaluator(modelList, biasList);
 
-          for (List<Double> current : inputValues) {
-            List<BigInteger> openFeatures = svmParser.parseFeaturesFromDouble(current);
+          int misses = 0;
+          List<Integer> expectedList = new ArrayList<>();
+          for (int i = 0; i < inputValues.size(); i++) {
+            List<BigInteger> openFeatures = svmParser.parseFeaturesFromDouble(inputValues.get(i));
             BigInteger actual = runApplication(constructApp(model, openFeatures));
-
-            int expected = eval.evaluate(current);
+            int expected = eval.evaluate(inputValues.get(i));
+            expectedList.add(expected);
             Assert.assertEquals(BigInteger.valueOf(expected), actual);
+
+            if (!BigInteger.valueOf(expected).equals(new BigInteger(trueValues.get(i)))) {
+              misses++;
+            }
           }
+          // Check that accuracy is above 90%
+          int maxFaults = (int) (inputValues.size() * 0.1);
+          System.out.println(expectedList);
+          System.out.println(trueValues);
+          System.out.println("faults " + misses + ", inputs " + inputValues.size());
+          Assert.assertTrue(misses < maxFaults);
         }
 
         private List<List<Double>> CSVListToDouble(List<CSVRecord> records) {
@@ -109,10 +121,16 @@ public class SVMComputationTests {
         public void test() throws IOException {
           String modelFilename, testFilename;
           modelFilename = getClass().getClassLoader().getResource(
-              "svms/models/cifar2048.csv").getFile();
+              "svms/models/newModel.csv").getFile();
           testFilename = getClass().getClassLoader().getResource(
-              "svms/models/smallcifar2048-test.csv").getFile();
-          testFiles(modelFilename, testFilename, 100);
+              "svms/models/smallNewData.csv").getFile();
+          testFiles(modelFilename, testFilename, 10000);
+
+          // modelFilename = getClass().getClassLoader().getResource(
+          // "svms/models/cifar2048.csv").getFile();
+          // testFilename = getClass().getClassLoader().getResource(
+          // "svms/models/smallcifar2048-test.csv").getFile();
+          // testFiles(modelFilename, testFilename, 100);
 
 //          modelFilename = getClass().getClassLoader().getResource(
 //              "svms/models/mit2048.csv").getFile();

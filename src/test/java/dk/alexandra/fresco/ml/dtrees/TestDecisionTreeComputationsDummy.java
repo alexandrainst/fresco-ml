@@ -28,4 +28,11 @@ public class TestDecisionTreeComputationsDummy extends AbstractDummyArithmeticTe
     runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTreeSix<>(), new TestParameters()
         .numParties(2));
   }
+
+  @Test
+  public void testEvaluateDecisionTreeAdvancedModel() {
+    runTest(new DecisionTreeComputationTests.TestEvaluateDecisionTreeAdvancedModel<>(),
+        new TestParameters()
+        .numParties(2));
+  }
 }

@@ -26,7 +26,7 @@ public class TestDTreeParser {
   @Before
   public void setup() throws Exception {
     testFile = new ArrayList<>();
-    testFile.add("3");
+    testFile.add("30");
     testFile.add("n= 568");
     testFile.add("node), split, n, loss, yval, (yprob)");
     testFile.add("      * denotes terminal node");
