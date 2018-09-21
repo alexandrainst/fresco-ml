@@ -21,12 +21,14 @@ public class TestDTreeParser {
   private List<String> stringCategories;
   private List<String> stringFeatures;
   private int intDepth;
+  private int numFeatures;
 
   @SuppressWarnings({ "unchecked" })
   @Before
   public void setup() throws Exception {
     testFile = new ArrayList<>();
-    testFile.add("30");
+    testFile.add(
+        "\"radius_1\",\"texture_1\",\"perimeter_1\",\"area_1\",\"smoothness_1\",\"compactness_1\",\"concavity_1\",\"concave_points_1\",\"symmetry_1\",\"fractal_dimension_1\",\"radius_2\",\"texture_2\",\"perimeter_2\",\"area_2\",\"smoothness_2\",\"compactness_2\",\"concavity_2\",\"concave_points_2\",\"symmetry_2\",\"fractal_dimension_2\",\"radius_3\",\"texture_3\",\"perimeter_3\",\"area_3\",\"smoothness_3\",\"compactness_3\",\"concavity_3\",\"concave_points_3\",\"symmetry_3\",\"fractal_dimension_3\"");
     testFile.add("n= 568");
     testFile.add("node), split, n, loss, yval, (yprob)");
     testFile.add("      * denotes terminal node");
@@ -40,9 +42,9 @@ public class TestDTreeParser {
     parser = new DTreeParser(10); // Weights will be multiplied by 10 and rounded to integer
 
     // Set the internal structures
-    Method setFeatures = DTreeParser.class.getDeclaredMethod("setFeatures", Stream.class);
+    Method setFeatures = DTreeParser.class.getDeclaredMethod("setFeatures", List.class);
     setFeatures.setAccessible(true);
-    setFeatures.invoke(parser, testFile.stream());
+    setFeatures.invoke(parser, testFile);
     Field features = DTreeParser.class.getDeclaredField("features");
     features.setAccessible(true);
     stringFeatures = (List<String>) features.get(parser);
@@ -58,6 +60,9 @@ public class TestDTreeParser {
     Field depth = DTreeParser.class.getDeclaredField("depth");
     depth.setAccessible(true);
     intDepth = (int) depth.get(parser);
+    Field numFeaturesField = DTreeParser.class.getDeclaredField("numOriginalFeatures");
+    numFeaturesField.setAccessible(true);
+    numFeatures = (int) numFeaturesField.get(parser);
   }
 
   private DecisionTreeModel makeTree() throws Exception {
@@ -72,6 +77,11 @@ public class TestDTreeParser {
   @Test
   public void testDepth() throws Exception {
     assertEquals(4, intDepth);
+  }
+
+  @Test
+  public void testNumFeatures() {
+    assertEquals(30, numFeatures);
   }
 
   @Test
@@ -126,4 +136,5 @@ public class TestDTreeParser {
     // Index 3 is node 11 since we are on the fourth layer (11 - 2^3)
     assertEquals(BigInteger.ZERO, model.getCategories().get(3));
   }
+
 }
