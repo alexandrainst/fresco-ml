@@ -76,7 +76,7 @@ public class SVMComputationTests {
           List<CSVRecord> records = testParser.getRecords();
           testParser.close();
           // Remove the true values as they are the first line in the file
-          CSVRecord trueValuesRecord = records.remove(0);
+          records.remove(0);
           List<List<Double>> inputValuesDouble = CSVListToDouble(records);
 
           CSVParser csvParser = CSVParser.parse(new File(modelFilename), Charset.defaultCharset(),
