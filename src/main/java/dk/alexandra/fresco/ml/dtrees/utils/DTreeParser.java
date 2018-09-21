@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +37,7 @@ public class DTreeParser {
   private static final int META_LINES = 4;
 
   // Multiply weights by this number and round to nearest integer
-  private static int PRECISION;
+  private final int scaling;
 
   private int depth = -1;
 
@@ -51,11 +52,58 @@ public class DTreeParser {
   private List<List<Boolean>> switchIdxs;
   private List<List<Integer>> categoriesIdxs;
 
-  public DTreeParser(int precision) {
-    PRECISION = precision;
+  public DTreeParser(int scaling) {
+    this.scaling = scaling;
   }
 
-  public DecisionTreeModel parseFile(String fileName) {
+  /**
+   * Parse a file of features for evaluation. The file format expected is a CSV where the first
+   * lines contains the names (as strings) of the features. Each following line is then a list of
+   * features.
+   *
+   * @param fileName
+   *          The filename, including path, of the feature file.
+   * @return A list of lists of BigIntegers ready for usage in an MPC computation.
+   */
+  public List<List<BigInteger>> parseFeatures(String fileName) {
+    try {
+      FileReader fileReader;
+      fileReader = new FileReader(fileName);
+      BufferedReader reader = new BufferedReader(fileReader);
+      List<String> collection = reader.lines().filter(line -> !line.trim().isEmpty()).collect(
+          Collectors.toList());
+      reader.close();
+      // Remove the first line, which is meta data
+      collection.remove(0);
+      List<List<BigInteger>> featureMatrix = new ArrayList<List<BigInteger>>(collection.size());
+      for (int i = 0; i < collection.size(); i++) {
+        List<BigInteger> currentListBigInteger = new ArrayList<>();
+        List<String> csvList = Arrays.asList(collection.get(i).split(","));
+        for (int j = 0; j < csvList.size(); j++) {
+          currentListBigInteger.add((new BigDecimal(csvList.get(j)).multiply(
+              new BigDecimal(scaling)).toBigInteger()));
+        }
+        featureMatrix.add(currentListBigInteger);
+      }
+      return featureMatrix;
+
+    } catch (FileNotFoundException e) {
+      System.out.println("Unable to open file '" + fileName + "'");
+    } catch (IOException e) {
+      System.out.println("Unable to close file '" + fileName + "'");
+    }
+    return null;
+  }
+
+  /**
+   * Parse a file containing a decision tree model based on the .txt output of the tree from R.
+   * However with the change that the first line of the file is a comma separated list of all the
+   * possible features of the model.
+   *
+   * @param fileName
+   * @return
+   */
+  public DecisionTreeModel parseModel(String fileName) {
 
     try {
       FileReader fileReader = new FileReader(fileName);
@@ -99,7 +147,7 @@ public class DTreeParser {
       for (int j = 0; j < featureIdxs.get(i).size(); j++) {
         currentFeatures.add(new BigInteger(String.valueOf(featureIdxs.get(i).get(j))));
         // Multiply with PRECISION to move to integers
-        currentWeights.add(new BigInteger(String.valueOf((int) (PRECISION * weightsIdxs.get(
+        currentWeights.add(new BigInteger(String.valueOf((int) (scaling * weightsIdxs.get(
             i).get(j)))));
       }
       bigFeatures.add(currentFeatures);
@@ -230,21 +278,7 @@ public class DTreeParser {
     features = new ArrayList<>();
     String featureString = list.get(0).replace("\"", "");
     features = Arrays.asList(featureString.split(","));
-    Collections.sort(features);
     numOriginalFeatures = features.size();
-
-    // // Skip the first meta lines and an extra since we want to skip the root as well
-    // list.stream().skip(META_LINES + 1).forEach(line -> {
-    // Pair<String, Boolean> featurePair = getFeature(line);
-    // String feature = featurePair.getFirst();
-    // // Go to next line if we have already added the feature
-    // if (!features.contains(feature)) {
-    // // The number we will associate with the feature
-    // features.add(feature);
-    // }
-    // });
-    // Sort the list alphabetically to be sure that the order of attributes does not leak info on the tree
-    features.sort(null);
   }
 
   private void setCategories(Stream<String> stream) {
@@ -258,9 +292,6 @@ public class DTreeParser {
         categories.add(category);
       }
     });
-    // Sort the list alphabetically to be sure that the order of attributes does not leak info on
-    // the tree
-    categories.sort(null);
   }
 
   private int getNodeIdx(String line) {
@@ -354,6 +385,6 @@ public class DTreeParser {
 
   public static void main(String args[]) {
     DTreeParser parser = new DTreeParser(1);
-    parser.parseFile(args[0]);
+    parser.parseModel(args[0]);
   }
 }
