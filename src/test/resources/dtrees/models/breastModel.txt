@@ -1,0 +1,13 @@
+"radius_1","texture_1","perimeter_1","area_1","smoothness_1","compactness_1","concavity_1","concave_points_1","symmetry_1","fractal_dimension_1","radius_2","texture_2","perimeter_2","area_2","smoothness_2","compactness_2","concavity_2","concave_points_2","symmetry_2","fractal_dimension_2","radius_3","texture_3","perimeter_3","area_3","smoothness_3","compactness_3","concavity_3","concave_points_3","symmetry_3","fractal_dimension_3"
+n= 568 
+
+node), split, n, loss, yval, (yprob)
+      * denotes terminal node
+
+ 1) root 568 211 B (0.62852113 0.37147887)  
+   2) radius_3< 16.795 379  33 B (0.91292876 0.08707124)  
+     4) concave_points_3< 0.1358 333   5 B (0.98498498 0.01501502) *
+     5) concave_points_3>=0.1358 46  18 M (0.39130435 0.60869565)  
+      10) texture_3< 25.67 19   4 B (0.78947368 0.21052632) *
+      11) texture_3>=25.67 27   3 M (0.11111111 0.88888889) *
+   3) radius_3>=16.795 189  11 M (0.05820106 0.94179894) *
