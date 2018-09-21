@@ -69,14 +69,14 @@ public class SVMParser {
 
       List<Integer> listOfVal = new ArrayList<>();
       for (String val : trueValues) {
-        listOfVal.add(Integer.parseInt(val));
+        listOfVal.add((int) Double.parseDouble(val));
       }
       Collections.sort(listOfVal);
       listOfVal = listOfVal.stream().distinct().collect(Collectors.toList());
 
       List<BigInteger> truthValues = new ArrayList<>();
       for (String val : trueValues) {
-        truthValues.add(BigInteger.valueOf(listOfVal.indexOf(Integer.parseInt(val))));
+        truthValues.add(BigInteger.valueOf(listOfVal.indexOf((int) Double.parseDouble(val))));
       }
 
       List<List<BigInteger>> testValeus = new ArrayList<>();
