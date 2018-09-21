@@ -19,6 +19,7 @@ import dk.alexandra.fresco.framework.TestThreadRunner.TestThread;
 import dk.alexandra.fresco.framework.TestThreadRunner.TestThreadFactory;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.sce.resources.ResourcePool;
+import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.framework.value.SInt;
 import dk.alexandra.fresco.ml.svm.utils.SVMParser;
 
@@ -60,18 +61,23 @@ public class SVMComputationTests {
     @Override
     public TestThread<ResourcePoolT, ProtocolBuilderNumeric> next() {
       return new TestThread<ResourcePoolT, ProtocolBuilderNumeric>() {
-        private void testFiles(String modelFilename, String testFilename, int scaling)
+        private void testFiles(String modelFilename, String testFilename, int scaling, int amount)
             throws IOException {
           SVMParser svmParser = new SVMParser(scaling);
           SVMModel model = svmParser.parseModelFromFile(modelFilename);
+
+          Pair<List<BigInteger>, List<List<BigInteger>>> parsedTests = svmParser.parseFeatures(
+              testFilename);
+          List<BigInteger> trueValues = parsedTests.getFirst();
+          List<List<BigInteger>> inputValues = parsedTests.getSecond();
 
           CSVParser testParser = CSVParser.parse(new File(testFilename), Charset.defaultCharset(),
               CSVFormat.DEFAULT);
           List<CSVRecord> records = testParser.getRecords();
           testParser.close();
           // Remove the true values as they are the first line in the file
-          CSVRecord trueValues = records.remove(0);
-          List<List<Double>> inputValues = CSVListToDouble(records);
+          CSVRecord trueValuesRecord = records.remove(0);
+          List<List<Double>> inputValuesDouble = CSVListToDouble(records);
 
           CSVParser csvParser = CSVParser.parse(new File(modelFilename), Charset.defaultCharset(),
               CSVFormat.DEFAULT);
@@ -86,22 +92,20 @@ public class SVMComputationTests {
 
           int misses = 0;
           List<Integer> expectedList = new ArrayList<>();
-          for (int i = 0; i < inputValues.size(); i++) {
-            List<BigInteger> openFeatures = svmParser.parseFeaturesFromDouble(inputValues.get(i));
-            BigInteger actual = runApplication(constructApp(model, openFeatures));
-            int expected = eval.evaluate(inputValues.get(i));
-            expectedList.add(expected);
+          for (int i = 0; i < inputValues.size() && i < amount; i++) {
+            BigInteger actual = runApplication(constructApp(model, inputValues.get(i)));
+            int expected = eval.evaluate(inputValuesDouble.get(i));
+            expectedList.add(actual.intValue());
             Assert.assertEquals(BigInteger.valueOf(expected), actual);
 
-            if (!BigInteger.valueOf(expected).equals(new BigInteger(trueValues.get(i)))) {
+            if (!actual.equals(trueValues.get(i))) {
               misses++;
             }
           }
           // Check that accuracy is above 90%
           int maxFaults = (int) (inputValues.size() * 0.1);
-          System.out.println(expectedList);
-          System.out.println(trueValues);
-          System.out.println("faults " + misses + ", inputs " + inputValues.size());
+          System.out.println("faults " + misses + ", inputs " + Math.min(inputValues.size(),
+              amount));
           Assert.assertTrue(misses < maxFaults);
         }
 
@@ -123,8 +127,8 @@ public class SVMComputationTests {
           modelFilename = getClass().getClassLoader().getResource(
               "svms/models/newModel.csv").getFile();
           testFilename = getClass().getClassLoader().getResource(
-              "svms/models/smallNewData.csv").getFile();
-          testFiles(modelFilename, testFilename, 10000);
+              "svms/models/newData.csv").getFile();
+          testFiles(modelFilename, testFilename, 1000, 400);
 
           // modelFilename = getClass().getClassLoader().getResource(
           // "svms/models/cifar2048.csv").getFile();

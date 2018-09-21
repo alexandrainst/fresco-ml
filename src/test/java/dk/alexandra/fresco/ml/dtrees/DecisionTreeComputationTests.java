@@ -178,12 +178,12 @@ public class DecisionTreeComputationTests {
       return new TestThread<ResourcePoolT, ProtocolBuilderNumeric>() {
         @Override
         public void test() throws IOException {
-          int scaling = 10000;
+          int scaling = 1000;
           DTreeParser parser = new DTreeParser(scaling);
           DecisionTreeModel treeModel = parser.parseModel(getClass().getClassLoader().getResource(
               "dtrees/models/breastModel.txt").getPath());
-          List<List<BigInteger>> testValues = parser.parseFeatures(getClass().getClassLoader().getResource(
-                  "dtrees/models/breastTest.csv").getPath());
+          List<List<BigInteger>> testValues = parser.parseFeatures(getClass().getClassLoader()
+              .getResource("dtrees/models/breastTest.csv").getPath());
 
           CSVParser csvParser = CSVParser.parse(new File(getClass().getClassLoader().getResource(
               "dtrees/models/breastPredictions.csv").getFile()), Charset
@@ -197,7 +197,7 @@ public class DecisionTreeComputationTests {
             BigInteger actual = runApplication(constructApp(treeModel, testValues.get(i)));
             PlainEvaluator evaluator = new PlainEvaluator(treeModel);
             BigInteger expected = evaluator.evaluate(testValues.get(i));
-            System.out.println("iteration ");
+
             Assert.assertEquals(expected, actual);
             Assert.assertEquals(predictions.get(i), actual);
           }
