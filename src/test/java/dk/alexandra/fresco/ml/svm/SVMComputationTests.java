@@ -125,10 +125,10 @@ public class SVMComputationTests {
         public void test() throws IOException {
           String modelFilename, testFilename;
           modelFilename = getClass().getClassLoader().getResource(
-              "svms/models/newModel.csv").getFile();
+              "svms/models/463classesModel.csv").getFile();
           testFilename = getClass().getClassLoader().getResource(
-              "svms/models/newData.csv").getFile();
-          testFiles(modelFilename, testFilename, 1000, 400);
+              "svms/models/463classesTest.csv").getFile();
+          testFiles(modelFilename, testFilename, 100000, 50);
 
           // modelFilename = getClass().getClassLoader().getResource(
           // "svms/models/cifar2048.csv").getFile();

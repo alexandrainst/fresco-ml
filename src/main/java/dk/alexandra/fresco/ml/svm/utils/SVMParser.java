@@ -79,16 +79,16 @@ public class SVMParser {
         truthValues.add(BigInteger.valueOf(listOfVal.indexOf((int) Double.parseDouble(val))));
       }
 
-      List<List<BigInteger>> testValeus = new ArrayList<>();
+      List<List<BigInteger>> testValues = new ArrayList<>();
       for (int i = 0; i < records.size(); i++) {
         List<BigInteger> currentTest = new ArrayList<>();
         for (int j = 0; j < records.get(i).size(); j++) {
           currentTest.add(new BigDecimal(records.get(i).get(j)).multiply(new BigDecimal(scaling))
               .toBigInteger());
         }
-        testValeus.add(currentTest);
+        testValues.add(currentTest);
       }
-      return new Pair<List<BigInteger>, List<List<BigInteger>>>(truthValues, testValeus);
+      return new Pair<List<BigInteger>, List<List<BigInteger>>>(truthValues, testValues);
 
     } catch (IOException e) {
       // TODO Auto-generated catch block
