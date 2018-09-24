@@ -8,9 +8,9 @@ import java.util.List;
 public class SVMModel {
   private final List<List<BigInteger>> supportVectors;
   private final List<BigInteger> bias;
-  private final int precision;
+  private final int scaling;
 
-  public SVMModel(List<List<Double>> doubleSupportVectors, List<Double> doubleBias, int precision) {
+  public SVMModel(List<List<Double>> doubleSupportVectors, List<Double> doubleBias, int scaling) {
     if (doubleSupportVectors.size() != doubleBias.size()) {
       throw new IllegalArgumentException("The amount of bias and support vectors is not the same");
     }
@@ -22,14 +22,14 @@ public class SVMModel {
             "The amount of featues is not the same for all support vectors");
       }
     }
-    this.precision = precision;
+    this.scaling = scaling;
 
     List<BigInteger> bigBias = new ArrayList<>(doubleBias.size());
     for (Double currentDouble : doubleBias) {
       // We must multiply the bias with 'precision' again since the inner products have been shifted
       // by precision twice as they consist of the sum of the product of shifted values
       bigBias.add(convertToBigInteger(currentDouble).multiply(BigInteger.valueOf(
-          precision)));
+          scaling)));
     }
 
     List<List<BigInteger>> bigSupportvectors = new ArrayList<>(doubleSupportVectors.size());
@@ -44,11 +44,11 @@ public class SVMModel {
     this.bias = bigBias;
   }
 
-  public BigInteger convertToBigInteger(Double input) {
+  private BigInteger convertToBigInteger(Double input) {
     // We use BigDecimal to avoid loss of precision when converting to integer
     BigDecimal currentBigDouble = new BigDecimal(input);
     // "Shift" to become an "integer"
-    currentBigDouble = currentBigDouble.multiply(new BigDecimal(precision));
+    currentBigDouble = currentBigDouble.multiply(new BigDecimal(scaling));
     // Round down to integer
     return currentBigDouble.toBigInteger();
   }

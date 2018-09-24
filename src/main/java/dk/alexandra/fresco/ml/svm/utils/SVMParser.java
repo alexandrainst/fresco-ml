@@ -52,13 +52,30 @@ public class SVMParser {
       return new SVMModel(supportVectors, bias, scaling);
 
     } catch (FileNotFoundException ex) {
-      System.out.println("Unable to open file '" + fileName + "'");
+      throw new RuntimeException("Could not load file " + fileName);
     } catch (IOException ex) {
-      System.out.println("Error reading file '" + fileName + "'");
+      throw new RuntimeException("Could not read file " + fileName);
     }
-    return null;
   }
 
+  /**
+   * Parse a csv file of test data. The format is that the first line contains the expected
+   * categories, as an integer. The following lines contain the test data as decimal numbers, one
+   * test/classification per line with one feature per cell. Thus the first number in the first line
+   * indicated the expected category of the first test. Note the categories do not have to be
+   * contiguous, i.e. from 0 to n for n support vectors in the model. It can instead be from 0 to n'
+   * where n'>n. This for example occur if the test file has been constructed from the full subset
+   * of data. However, it is required that once the unique category numbers are sorted the i'th
+   * category number expresses the the category of the i'th support vector in the model which the
+   * test data is run on.
+   *
+   * Decimal numbers are scaled to big integers using a multiplicative constant and then rounding.
+   *
+   * @param fileName
+   *          The path and filename of the test data
+   * @return A pair where the first element is the list of expected categories and the second is a
+   *         list of list of the test data as big integers
+   */
   public Pair<List<BigInteger>, List<List<BigInteger>>> parseFeatures(String fileName) {
     try {
       CSVParser parser = CSVParser.parse(new File(fileName), Charset.defaultCharset(),
@@ -71,10 +88,12 @@ public class SVMParser {
       for (String val : trueValues) {
         listOfVal.add((int) Double.parseDouble(val));
       }
+      // Compute a sorted list of unique category integers
       Collections.sort(listOfVal);
       listOfVal = listOfVal.stream().distinct().collect(Collectors.toList());
 
       List<BigInteger> truthValues = new ArrayList<>();
+      // Map the i'th category integer to the i'th category
       for (String val : trueValues) {
         truthValues.add(BigInteger.valueOf(listOfVal.indexOf((int) Double.parseDouble(val))));
       }
@@ -91,23 +110,8 @@ public class SVMParser {
       return new Pair<List<BigInteger>, List<List<BigInteger>>>(truthValues, testValues);
 
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      throw new RuntimeException("Could not read file " + fileName);
     }
-    return null;
-  }
-
-  /**
-   * Turn a list of double into a list of BigIntegers as the secure evaluation requires. The doubles
-   * get converted by first multiplying with the scaling factor and then rounded down.
-   *
-   * @param input
-   *          The vector to convert
-   * @return The converted vector
-   */
-  public List<BigInteger> parseFeaturesFromDouble(List<Double> input) {
-    return input.stream().map(val -> new BigDecimal(val).multiply(new BigDecimal(scaling))
-        .toBigInteger()).collect(Collectors.toList());
   }
 
   private List<Double> parseLine(CSVRecord line) {

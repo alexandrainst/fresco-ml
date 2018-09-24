@@ -88,11 +88,10 @@ public class DTreeParser {
       return featureMatrix;
 
     } catch (FileNotFoundException e) {
-      System.out.println("Unable to open file '" + fileName + "'");
+      throw new RuntimeException("Could not load file " + fileName);
     } catch (IOException e) {
-      System.out.println("Unable to close file '" + fileName + "'");
+      throw new RuntimeException("Could not read file " + fileName);
     }
-    return null;
   }
 
   /**
@@ -122,11 +121,10 @@ public class DTreeParser {
       return makeTreeModel();
 
     } catch (FileNotFoundException ex) {
-      System.out.println("Unable to open file '" + fileName + "'");
+      throw new RuntimeException("Could not load file " + fileName);
     } catch (IOException ex) {
-      System.out.println("Error reading file '" + fileName + "'");
+      throw new RuntimeException("Could not read file " + fileName);
     }
-    return null;
   }
 
   private void mirrorTree() {
@@ -381,10 +379,5 @@ public class DTreeParser {
       }
     }
     return null;
-  }
-
-  public static void main(String args[]) {
-    DTreeParser parser = new DTreeParser(1);
-    parser.parseModel(args[0]);
   }
 }
