@@ -36,12 +36,13 @@ public class DecisionTreeComputationTests {
     return root -> {
       DRes<DecisionTreeModelClosed> closedModelD;
       if (root.getBasicNumericContext().getMyId() == treeInputPartyId) {
-        InputDecisionTree f = new InputDecisionTree(treeModel, featureVectorSize, treeInputPartyId);
-        closedModelD = root.par(f);
+        InputDecisionTree f = new InputDecisionTree(treeModel, featureVectorSize,
+            featureInputPartyId);
+        closedModelD = root.seq(f);
       } else {
         InputDecisionTreeAsReceiver f = new InputDecisionTreeAsReceiver(treeModel.getDepth(),
             featureVectorSize, treeInputPartyId);
-        closedModelD = root.par(f);
+        closedModelD = root.seq(f);
       }
 
       DRes<List<DRes<SInt>>> featureVectorD = root.collections().closeList(featureVectorOpen,

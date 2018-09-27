@@ -1,8 +1,10 @@
 package dk.alexandra.fresco.ml.dtrees;
 
 import dk.alexandra.fresco.framework.DRes;
-import dk.alexandra.fresco.framework.builder.ComputationParallel;
+import dk.alexandra.fresco.framework.builder.Computation;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.framework.util.Pair;
+import dk.alexandra.fresco.framework.value.OInt;
 import dk.alexandra.fresco.framework.value.SInt;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -15,17 +17,16 @@ import java.util.stream.Collectors;
  * holding the tree model.</p>
  */
 public class InputDecisionTree implements
-    ComputationParallel<DecisionTreeModelClosed, ProtocolBuilderNumeric> {
+    Computation<DecisionTreeModelClosed, ProtocolBuilderNumeric> {
 
   private final DecisionTreeModel treeModel;
   private final int featureVectorSize;
-  private final int inputPartyId;
+  private final int otherPartyId;
 
-  public InputDecisionTree(DecisionTreeModel treeModel, int featureVectorSize,
-      int inputPartyId) {
+  public InputDecisionTree(DecisionTreeModel treeModel, int featureVectorSize, int otherPartyId) {
     this.treeModel = treeModel;
     this.featureVectorSize = featureVectorSize;
-    this.inputPartyId = inputPartyId;
+    this.otherPartyId = otherPartyId;
   }
 
   /**
@@ -43,7 +44,7 @@ public class InputDecisionTree implements
   /**
    * Flattens nested list.
    */
-  private <T> List<T> flat(List<List<T>> nested) {
+  static <T> List<T> flat(List<List<T>> nested) {
     return nested.stream().flatMap(Collection::stream)
         .collect(Collectors.toCollection(ArrayList::new));
   }
@@ -57,7 +58,8 @@ public class InputDecisionTree implements
     for (BigInteger featureIndex : featureIndexes) {
       List<DRes<SInt>> featureIndexBits = new ArrayList<>(featureVectorSize);
       for (BigInteger bit : convertIndexToBits(featureIndex)) {
-        featureIndexBits.add(builder.numeric().input(bit, inputPartyId));
+        featureIndexBits.add(
+            builder.numeric().input(bit, builder.getBasicNumericContext().getMyId()));
       }
       featureIndexesClosed.add(featureIndexBits);
     }
@@ -70,7 +72,7 @@ public class InputDecisionTree implements
   private List<DRes<SInt>> input(ProtocolBuilderNumeric builder, List<BigInteger> values) {
     List<DRes<SInt>> secrets = new ArrayList<>(values.size());
     for (BigInteger value : values) {
-      secrets.add(builder.numeric().input(value, inputPartyId));
+      secrets.add(builder.numeric().input(value, builder.getBasicNumericContext().getMyId()));
     }
     return secrets;
   }
@@ -81,15 +83,31 @@ public class InputDecisionTree implements
     List<BigInteger> weights = flat(treeModel.getWeights());
     List<BigInteger> categories = treeModel.getCategories();
 
-    List<List<DRes<SInt>>> featureIndexesClosed = inputFeatureIndexes(builder, featureIndexes);
-    List<DRes<SInt>> weightsClosed = input(builder, weights);
-    List<DRes<SInt>> categoriesClosed = input(builder, categories);
-
-    DecisionTreeModelClosed closedModel = new DecisionTreeModelClosed(
-        treeModel.getDepth(),
-        featureIndexesClosed,
-        weightsClosed,
-        categoriesClosed);
-    return () -> closedModel;
+    return builder.par(par -> {
+      List<List<DRes<SInt>>> featureIndexesClosed = inputFeatureIndexes(par, featureIndexes);
+      List<DRes<SInt>> weightsClosed = input(par, weights);
+      List<DRes<SInt>> categoriesClosed = input(par, categories);
+      DecisionTreeModelClosed closedModel = new DecisionTreeModelClosed(
+          treeModel.getDepth(),
+          featureIndexesClosed,
+          weightsClosed,
+          categoriesClosed);
+      return () -> closedModel;
+    }).par((par, model) -> {
+      List<DRes<SInt>> featureIndexesFlat = flat(model.getFeatureIndexes());
+      List<DRes<OInt>> openedBits = new ArrayList<>(featureIndexesFlat.size());
+      for (DRes<SInt> bit : featureIndexesFlat) {
+        final DRes<SInt> finalBit = bit;
+        openedBits.add(
+            par.seq(seq -> {
+              DRes<SInt> notBit = seq.numeric().subFromOpen(seq.getOIntFactory().one(), finalBit);
+              DRes<SInt> and = seq.numeric().mult(finalBit, notBit);
+              return seq.numeric().openAsOInt(and, otherPartyId);
+            })
+        );
+      }
+      Pair<DecisionTreeModelClosed, List<DRes<OInt>>> pair = new Pair<>(model, openedBits);
+      return () -> pair;
+    }).seq((seq, pair) -> pair::getFirst);
   }
 }
