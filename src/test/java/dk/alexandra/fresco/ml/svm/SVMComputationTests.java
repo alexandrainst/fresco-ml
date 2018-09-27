@@ -128,7 +128,7 @@ public class SVMComputationTests {
               "svms/models/463classesModel.csv").getFile();
           testFilename = getClass().getClassLoader().getResource(
               "svms/models/463classesTest.csv").getFile();
-          testFiles(modelFilename, testFilename, 100000, 50);
+          testFiles(modelFilename, testFilename, 128, 3);
 
           // modelFilename = getClass().getClassLoader().getResource(
           // "svms/models/cifar2048.csv").getFile();
