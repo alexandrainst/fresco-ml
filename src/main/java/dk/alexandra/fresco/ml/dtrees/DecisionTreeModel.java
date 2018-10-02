@@ -2,7 +2,6 @@ package dk.alexandra.fresco.ml.dtrees;
 
 import dk.alexandra.fresco.framework.util.Pair;
 import java.math.BigInteger;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -11,45 +10,18 @@ import java.util.List;
 public class DecisionTreeModel {
 
   private final int depth;
-  private final int numOriginalFeatures;
   private final List<List<BigInteger>> featureIndexes;
   private final List<List<BigInteger>> weights;
   private final List<BigInteger> categories;
 
   public DecisionTreeModel(int depth,
-      int numOriginalFeatures,
       List<List<BigInteger>> featureIndexes,
       List<List<BigInteger>> weights,
       List<BigInteger> categories) {
     this.depth = depth;
-    this.numOriginalFeatures = numOriginalFeatures;
-    int numFeatures = getNumFeatures(featureIndexes);
-    if (numOriginalFeatures < numFeatures) {
-      throw new IllegalArgumentException(
-          "Can't have fewer original features than actual features " + this.numOriginalFeatures
-              + " " + numFeatures);
-    }
     this.featureIndexes = featureIndexes;
     this.weights = weights;
     this.categories = categories;
-  }
-
-  public DecisionTreeModel(int depth,
-      List<List<BigInteger>> featureIndexes,
-      List<List<BigInteger>> weights,
-      List<BigInteger> categories) {
-    this(depth,
-        getNumFeatures(featureIndexes),
-        featureIndexes,
-        weights,
-        categories);
-  }
-
-  private static int getNumFeatures(List<List<BigInteger>> featureIndexes) {
-    return featureIndexes.stream()
-        .flatMap(Collection::stream)
-        .max(BigInteger::compareTo)
-        .orElse(BigInteger.ZERO).intValueExact() + 1;
   }
 
   public DecisionTreeModel(List<List<BigInteger>> featureIndexes,
@@ -92,10 +64,6 @@ public class DecisionTreeModel {
         .get(idx);
     BigInteger featureIndex = featureIndexes.get(d).get(idx);
     return new Pair<>(featureIndex, weight);
-  }
-
-  public int getNumOriginalFeatures() {
-    return numOriginalFeatures;
   }
 
 }

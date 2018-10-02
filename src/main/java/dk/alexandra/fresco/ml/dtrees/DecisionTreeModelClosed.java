@@ -32,10 +32,6 @@ public class DecisionTreeModelClosed {
     return featureIndexes.size();
   }
 
-  public int getNumberLeafNodes() {
-    return categories.size();
-  }
-
   public List<List<DRes<SInt>>> getFeatureIndexes() {
     return featureIndexes;
   }

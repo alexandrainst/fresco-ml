@@ -44,9 +44,6 @@ public class DTreeParser {
   private List<String> features;
   private List<String> categories;
 
-  // the number of features in the training set; this is not the same as the number of distinct
-  // feature indexes, since some of the features might not be used in the tree
-  private int numOriginalFeatures;
   private List<List<Integer>> featureIdxs;
   private List<List<Double>> weightsIdxs;
   private List<List<Boolean>> switchIdxs;
@@ -144,7 +141,7 @@ public class DTreeParser {
       List<BigInteger> currentWeights = new ArrayList<>();
       for (int j = 0; j < featureIdxs.get(i).size(); j++) {
         currentFeatures.add(new BigInteger(String.valueOf(featureIdxs.get(i).get(j))));
-        // Multiply with PRECISION to move to integers
+        // Multiply with scaling to move to integers
         currentWeights.add(new BigInteger(String.valueOf((int) (scaling * weightsIdxs.get(
             i).get(j)))));
       }
@@ -156,8 +153,8 @@ public class DTreeParser {
       bigCategories.add(
           new BigInteger(String.valueOf(categoriesIdxs.get(categoriesIdxs.size() - 1).get(i))));
     }
-    return new DecisionTreeModel(depth, numOriginalFeatures, bigFeatures,
-        bigWeights, bigCategories);
+    return new DecisionTreeModel(depth, bigFeatures, bigWeights,
+        bigCategories);
   }
 
   private void switchSubtree(int parentNodeIdx) {
@@ -191,7 +188,6 @@ public class DTreeParser {
   }
 
   private void constructTree(List<String> list) {
-    // numOriginalFeatures = Integer.parseInt(list.get(0));
     featureIdxs = new ArrayList<>();
     weightsIdxs = new ArrayList<>();
     categoriesIdxs = new ArrayList<>();
@@ -276,7 +272,6 @@ public class DTreeParser {
     features = new ArrayList<>();
     String featureString = list.get(0).replace("\"", "");
     features = Arrays.asList(featureString.split(","));
-    numOriginalFeatures = features.size();
   }
 
   private void setCategories(Stream<String> stream) {
