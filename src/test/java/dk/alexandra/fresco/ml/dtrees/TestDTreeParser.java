@@ -21,7 +21,6 @@ public class TestDTreeParser {
   private List<String> stringCategories;
   private List<String> stringFeatures;
   private int intDepth;
-  private int numFeatures;
 
   @SuppressWarnings({ "unchecked" })
   @Before
@@ -60,9 +59,6 @@ public class TestDTreeParser {
     Field depth = DTreeParser.class.getDeclaredField("depth");
     depth.setAccessible(true);
     intDepth = (int) depth.get(parser);
-    Field numFeaturesField = DTreeParser.class.getDeclaredField("numOriginalFeatures");
-    numFeaturesField.setAccessible(true);
-    numFeatures = (int) numFeaturesField.get(parser);
   }
 
   private DecisionTreeModel makeTree() throws Exception {
@@ -81,7 +77,7 @@ public class TestDTreeParser {
 
   @Test
   public void testNumFeatures() {
-    assertEquals(30, numFeatures);
+    assertEquals(30, stringFeatures.size());
   }
 
   @Test
