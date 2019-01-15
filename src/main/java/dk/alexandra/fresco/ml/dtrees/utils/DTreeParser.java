@@ -58,8 +58,7 @@ public class DTreeParser {
    * lines contains the names (as strings) of the features. Each following line is then a list of
    * features.
    *
-   * @param fileName
-   *          The filename, including path, of the feature file.
+   * @param fileName The filename, including path, of the feature file.
    * @return A list of lists of BigIntegers ready for usage in an MPC computation.
    */
   public List<List<BigInteger>> parseFeatures(String fileName) {
@@ -95,9 +94,6 @@ public class DTreeParser {
    * Parse a file containing a decision tree model based on the .txt output of the tree from R.
    * However with the change that the first line of the file is a comma separated list of all the
    * possible features of the model.
-   *
-   * @param fileName
-   * @return
    */
   public DecisionTreeModel parseModel(String fileName) {
 
@@ -153,8 +149,7 @@ public class DTreeParser {
       bigCategories.add(
           new BigInteger(String.valueOf(categoriesIdxs.get(categoriesIdxs.size() - 1).get(i))));
     }
-    return new DecisionTreeModel(depth, bigFeatures, bigWeights,
-        bigCategories);
+    return new DecisionTreeModel(bigFeatures, bigWeights, bigCategories);
   }
 
   private void switchSubtree(int parentNodeIdx) {
