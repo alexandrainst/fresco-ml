@@ -149,7 +149,10 @@ public class DTreeParser {
       bigCategories.add(
           new BigInteger(String.valueOf(categoriesIdxs.get(categoriesIdxs.size() - 1).get(i))));
     }
-    return new DecisionTreeModel(bigFeatures, bigWeights, bigCategories);
+//    System.out.println(featureIdxs.size() - 1);
+//    System.out.println(features.size());
+    return new DecisionTreeModel(bigFeatures.size() + 1, features.size(),
+        bigFeatures, bigWeights, bigCategories);
   }
 
   private void switchSubtree(int parentNodeIdx) {
