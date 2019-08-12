@@ -2,17 +2,17 @@ package dk.alexandra.fresco.ml.fl.demo;
 
 import dk.alexandra.fresco.framework.Party;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.framework.builder.numeric.field.BigIntegerFieldDefinition;
 import dk.alexandra.fresco.framework.configuration.NetworkConfiguration;
 import dk.alexandra.fresco.framework.configuration.NetworkConfigurationImpl;
-import dk.alexandra.fresco.framework.network.AsyncNetwork;
 import dk.alexandra.fresco.framework.network.CloseableNetwork;
+import dk.alexandra.fresco.framework.network.socket.SocketNetwork;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngine;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngineImpl;
 import dk.alexandra.fresco.framework.sce.evaluator.BatchedProtocolEvaluator;
 import dk.alexandra.fresco.framework.sce.evaluator.BatchedStrategy;
 import dk.alexandra.fresco.framework.util.AesCtrDrbg;
 import dk.alexandra.fresco.framework.util.ModulusFinder;
-import dk.alexandra.fresco.framework.util.OpenedValueStoreImpl;
 import dk.alexandra.fresco.ml.fl.ClientFlHandler;
 import dk.alexandra.fresco.ml.fl.DirectMpcFlHandler;
 import dk.alexandra.fresco.ml.fl.FlTrainer;
@@ -20,7 +20,9 @@ import dk.alexandra.fresco.ml.fl.FlTrainerImpl;
 import dk.alexandra.fresco.suite.spdz.SpdzProtocolSuite;
 import dk.alexandra.fresco.suite.spdz.SpdzResourcePool;
 import dk.alexandra.fresco.suite.spdz.SpdzResourcePoolImpl;
+import dk.alexandra.fresco.suite.spdz.storage.SpdzDataSupplier;
 import dk.alexandra.fresco.suite.spdz.storage.SpdzDummyDataSupplier;
+import dk.alexandra.fresco.suite.spdz.storage.SpdzOpenedValueStoreImpl;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -36,8 +38,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.deeplearning4j.datasets.iterator.ExistingDataSetIterator;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
-import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.deeplearning4j.optimize.listeners.EvaluativeListener;
+import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.slf4j.Logger;
@@ -51,13 +54,17 @@ public class MpcFlMnistParty {
   private static final int BASE_PORT = 3000;
   private static Logger logger = LoggerFactory.getLogger(MpcFlMnistParty.class);
 
+  private static MyChart chart;
+  private static int counter = 0;
+
   public static void main(String[] args) throws IOException, ParseException {
 
     CmdLineOptionsParser optionsParser = new CmdLineOptionsParser(args);
     // Setup context for FL
     SpdzTestSetup setup = createSetup(optionsParser.getMyId(), optionsParser.getNumParties());
-    MnistTestContext context = MnistTestContext.builder()
-        .localExamples(optionsParser.getNumExamples()).build();
+    MnistTestContext context =
+        MnistTestContext.builder().localExamples(optionsParser.getNumExamples()).build();
+    chart = new MyChart("Local model for party " + setup.getRp().getMyId());
 
     FlTrainer trainer = buildFlTrainer(setup, context);
     trainAndEval(setup, context, trainer);
@@ -77,10 +84,11 @@ public class MpcFlMnistParty {
               + "(must be larger than 0, all parties must use the same number)")
           .build();
       options.addOption(partyOpt);
-      Option numExamplesOpt = Option.builder("l").longOpt("local-examples").hasArg()
-          .argName("number").desc("The number of local examples used for training by this party "
-              + "(must be in range [1, ..., 60000], all parties must use the same number)")
-          .build();
+      Option numExamplesOpt =
+          Option.builder("l").longOpt("local-examples").hasArg().argName("number")
+              .desc("The number of local examples used for training by this party "
+                  + "(must be in range [1, ..., 60000], all parties must use the same number)")
+              .build();
       options.addOption(numExamplesOpt);
       Option idOpt = Option.builder("i").longOpt("party-id").hasArg().argName("id").required()
           .desc("The id of this party (party ids are consecutive and start from 1)").build();
@@ -90,8 +98,8 @@ public class MpcFlMnistParty {
         CommandLine cmd = parser.parse(options, args);
         this.myId = Integer.parseInt(cmd.getOptionValue('i'));
         this.numParties = Integer.parseInt(cmd.getOptionValue('n', "1"));
-        this.numExamples = Integer
-            .parseInt(cmd.getOptionValue('l', "" + MnistTestContext.DEFAULT_LOCAL_EXAMPLES));
+        this.numExamples =
+            Integer.parseInt(cmd.getOptionValue('l', "" + MnistTestContext.DEFAULT_LOCAL_EXAMPLES));
         if (this.numParties < 1) {
           throw new ParseException("Invalid number of parties: " + this.numParties);
         }
@@ -107,11 +115,10 @@ public class MpcFlMnistParty {
         formatter.printHelp("", options);
         System.exit(1);
       }
-      System.out.println(
-          " ___ ___ ___ ___  ___ ___          ___ _       ___\n" +
-          "| __| _ \\ __/ __|/ __/ _ \\   ___  | __| |     |   \\ ___ _ __  ___\n" +
-          "| _||   / _|\\__ \\ (_| (_) | |___| | _|| |__   | |) / -_) '  \\/ _ \\\n" +
-          "|_| |_|_\\___|___/\\___\\___/        |_| |____|  |___/\\___|_|_|_\\___/");
+      System.out.println(" ___ ___ ___ ___  ___ ___          ___ _       ___\n"
+          + "| __| _ \\ __/ __|/ __/ _ \\   ___  | __| |     |   \\ ___ _ __  ___\n"
+          + "| _||   / _|\\__ \\ (_| (_) | |___| | _|| |__   | |) / -_) '  \\/ _ \\\n"
+          + "|_| |_|_\\___|___/\\___\\___/        |_| |____|  |___/\\___|_|_|_\\___/");
     }
 
     private int getMyId() {
@@ -131,14 +138,10 @@ public class MpcFlMnistParty {
   /**
    * Trains and evaluates a model with FL using SPDZ.
    *
-   * @param setup
-   *          the SPDZ setup
-   * @param context
-   *          the context for the MNIST test
-   * @param trainer
-   *          the trainer used to train the model
-   * @throws IOException
-   *           if the test data set cannot be read.
+   * @param setup the SPDZ setup
+   * @param context the context for the MNIST test
+   * @param trainer the trainer used to train the model
+   * @throws IOException if the test data set cannot be read.
    */
   private static void trainAndEval(SpdzTestSetup setup, MnistTestContext context, FlTrainer trainer)
       throws IOException {
@@ -147,7 +150,9 @@ public class MpcFlMnistParty {
     Instant start = Instant.now();
     for (int i = 0; i < context.getGlobalEpochs(); i++) {
       Instant beforeLocal = Instant.now();
+
       trainer.fitLocalModel();
+
       Instant afterLocal = Instant.now();
       localTime = localTime.plus(Duration.between(beforeLocal, afterLocal));
       if (setup.getRp().getNoOfParties() > 1) {
@@ -155,6 +160,11 @@ public class MpcFlMnistParty {
         trainer.updateGlobalModel();
         Instant afterUpdate = Instant.now();
         mpcTime = mpcTime.plus(Duration.between(beforeUpdate, afterUpdate));
+
+        MnistDataSetIterator it = new MnistDataSetIterator(MnistTestContext.DEFAULT_BATCHSIZE,
+            false, MnistTestContext.DEFAULT_SEED);
+        Evaluation eval = trainer.getModel().evaluate(it);
+        chart.addPoint(counter, eval.accuracy());
       }
     }
     Instant stop = Instant.now();
@@ -172,22 +182,38 @@ public class MpcFlMnistParty {
 
   private static FlTrainer buildFlTrainer(SpdzTestSetup setup, MnistTestContext context)
       throws IOException {
-    ClientFlHandler flHandler = new DirectMpcFlHandler<>(setup.getSce(), setup.getRp(),
-        setup.getNet());
-    //DataSetIterator trainSet = new MnistDataSetIterator(context.getBatchSize(),
-    //    context.getLocalExamples(), false, true, true, setup.getRp().getMyId());
-    DataSetIterator trainSet = getTrainingData(setup.getRp().getMyId(), context.getLocalExamples(), context.getBatchSize());
+    ClientFlHandler flHandler =
+        new DirectMpcFlHandler<>(setup.getSce(), setup.getRp(), setup.getNet());
+    // DataSetIterator trainSet = new MnistDataSetIterator(context.getBatchSize(),
+    // context.getLocalExamples(), false, true, true, setup.getRp().getMyId());
+    DataSetIterator trainSet = getTrainingData(setup.getRp().getMyId(), context.getLocalExamples(),
+        context.getBatchSize());
     MultiLayerNetwork model = new MultiLayerNetwork(context.getConf());
     model.init();
+
+    EvaluativeListener listener =
+        new EvaluativeListener(
+            new MnistDataSetIterator(MnistTestContext.DEFAULT_BATCHSIZE, 1000, false, false, true,
+                MnistTestContext.DEFAULT_SEED),
+            context.getLocalExamples() / context.getBatchSize());
+    listener.setCallback((arg0, arg1, arg2, arg3) -> {
+      chart.addPoint(++counter,
+          ((Evaluation) arg3[0]).accuracy());
+    });
+
+    model.setListeners(listener);
+
     FlTrainer trainer = new FlTrainerImpl(flHandler, model, trainSet, context.getLocalEpochs(),
         context.getLocalExamples());
     return trainer;
   }
 
-  private static DataSetIterator getTrainingData(int id, int examples, int batch) throws IOException {
+  private static DataSetIterator getTrainingData(int id, int examples, int batch)
+      throws IOException {
     MnistDataSetIterator it = new MnistDataSetIterator(60000, 60000, false);
     DataSet data = it.next();
     data = data.filterBy(IntStream.range(0, 10).filter(i -> i != id).toArray());
+    data.shuffle(id);
     data = data.sample(examples);
     return new ExistingDataSetIterator(data.batchBy(batch));
   }
@@ -198,14 +224,20 @@ public class MpcFlMnistParty {
       parties.put(i, new Party(i, "localhost", BASE_PORT + i));
     }
     NetworkConfiguration conf = new NetworkConfigurationImpl(myId, parties);
-    CloseableNetwork net = new AsyncNetwork(conf);
-    SpdzDummyDataSupplier supplier = new SpdzDummyDataSupplier(myId, numParties,
+    CloseableNetwork net = new SocketNetwork(conf);
+
+    BigIntegerFieldDefinition definition =
+        new BigIntegerFieldDefinition(ModulusFinder.findSuitableModulus(MOD_BIT_LENGTH));
+    SpdzOpenedValueStoreImpl store = new SpdzOpenedValueStoreImpl();
+    SpdzDataSupplier supplier = new SpdzDummyDataSupplier(myId, numParties, definition,
         ModulusFinder.findSuitableModulus(MOD_BIT_LENGTH));
-    SpdzResourcePool rp = new SpdzResourcePoolImpl(myId, numParties, new OpenedValueStoreImpl<>(),
-        supplier, new AesCtrDrbg());
+    SpdzResourcePool rp =
+        new SpdzResourcePoolImpl(myId, numParties, store, supplier, seed -> new AesCtrDrbg(seed));
+
     SpdzProtocolSuite suite = new SpdzProtocolSuite(MAX_BIT_LENGTH);
-    SecureComputationEngine<SpdzResourcePool, ProtocolBuilderNumeric> sce = new SecureComputationEngineImpl<>(
-        suite, new BatchedProtocolEvaluator<>(new BatchedStrategy<>(), suite, BATCH_SIZE));
+    SecureComputationEngine<SpdzResourcePool, ProtocolBuilderNumeric> sce =
+        new SecureComputationEngineImpl<>(suite,
+            new BatchedProtocolEvaluator<>(new BatchedStrategy<>(), suite, BATCH_SIZE));
     return new SpdzTestSetup(net, rp, sce);
   }
 

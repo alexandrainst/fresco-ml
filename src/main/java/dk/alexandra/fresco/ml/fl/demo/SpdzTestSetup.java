@@ -2,10 +2,11 @@ package dk.alexandra.fresco.ml.fl.demo;
 
 import dk.alexandra.fresco.framework.Party;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.framework.builder.numeric.field.BigIntegerFieldDefinition;
 import dk.alexandra.fresco.framework.configuration.NetworkConfiguration;
 import dk.alexandra.fresco.framework.configuration.NetworkConfigurationImpl;
-import dk.alexandra.fresco.framework.network.AsyncNetwork;
 import dk.alexandra.fresco.framework.network.CloseableNetwork;
+import dk.alexandra.fresco.framework.network.socket.SocketNetwork;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngine;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngineImpl;
 import dk.alexandra.fresco.framework.sce.evaluator.BatchedProtocolEvaluator;
@@ -13,12 +14,14 @@ import dk.alexandra.fresco.framework.sce.evaluator.BatchedStrategy;
 import dk.alexandra.fresco.framework.util.AesCtrDrbg;
 import dk.alexandra.fresco.framework.util.ExceptionConverter;
 import dk.alexandra.fresco.framework.util.ModulusFinder;
-import dk.alexandra.fresco.framework.util.OpenedValueStoreImpl;
 import dk.alexandra.fresco.suite.spdz.SpdzProtocolSuite;
 import dk.alexandra.fresco.suite.spdz.SpdzResourcePool;
 import dk.alexandra.fresco.suite.spdz.SpdzResourcePoolImpl;
+import dk.alexandra.fresco.suite.spdz.storage.SpdzDataSupplier;
 import dk.alexandra.fresco.suite.spdz.storage.SpdzDummyDataSupplier;
+import dk.alexandra.fresco.suite.spdz.storage.SpdzOpenedValueStoreImpl;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -124,10 +127,17 @@ public class SpdzTestSetup implements TestSetup<SpdzResourcePool, ProtocolBuilde
       Map<Integer, CloseableNetwork> netMap = createNetworks(parties);
       Map<Integer, SpdzTestSetup> setups = new HashMap<>(parties);
       for (int i = 1; i < parties + 1; i++) {
-        SpdzDummyDataSupplier supplier = new SpdzDummyDataSupplier(i, parties,
-            ModulusFinder.findSuitableModulus(modLength));
-        SpdzResourcePool rp = new SpdzResourcePoolImpl(i, parties, new OpenedValueStoreImpl<>(),
-            supplier, new AesCtrDrbg(new byte[32]));
+        
+        BigInteger modulus = ModulusFinder.findSuitableModulus(modLength);
+        final BigIntegerFieldDefinition definition = new BigIntegerFieldDefinition(modulus);
+        SpdzOpenedValueStoreImpl store = new SpdzOpenedValueStoreImpl();
+        SpdzDataSupplier supplier = new SpdzDummyDataSupplier(i, parties, definition, new BigInteger(modulus.bitLength(), new java.util.Random(0)).mod(modulus));
+        SpdzResourcePool rp = new SpdzResourcePoolImpl(i, parties, store, supplier, seed -> new AesCtrDrbg(seed));
+
+//        SpdzDummyDataSupplier supplier = new SpdzDummyDataSupplier(i, parties,
+//            ModulusFinder.findSuitableModulus(modLength));
+//        SpdzResourcePool rp = new SpdzResourcePoolImpl(i, parties, new OpenedValueStoreImpl<>(),
+//            supplier, new AesCtrDrbg(new byte[32]));
         SpdzProtocolSuite suite = new SpdzProtocolSuite(maxLength);
         SecureComputationEngine<SpdzResourcePool, ProtocolBuilderNumeric> sce = new SecureComputationEngineImpl<>(
             suite, new BatchedProtocolEvaluator<>(new BatchedStrategy<>(), suite));
@@ -148,7 +158,7 @@ public class SpdzTestSetup implements TestSetup<SpdzResourcePool, ProtocolBuilde
       for (int i = 1; i < numParties + 1; i++) {
         final NetworkConfiguration conf = confs.get(i - 1);
         Future<CloseableNetwork> f = es.submit(() -> {
-          return new AsyncNetwork(conf);
+          return new SocketNetwork(conf);
         });
         futureMap.put(i, f);
       }
