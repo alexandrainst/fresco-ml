@@ -32,7 +32,7 @@ import org.nd4j.linalg.factory.Nd4j;
 public final class DirectMpcFlHandler<ResourcePoolT extends NumericResourcePool>
     implements ClientFlHandler, ServerFlHandler {
 
-  private static final int DEFAULT_SCALE_UP = 1000_000_000;
+  private static final int DEFAULT_SCALE_UP = 1000;
   private final SecureComputationEngine<ResourcePoolT, ProtocolBuilderNumeric> sce;
   private final ResourcePoolT rp;
   private final Network network;
@@ -81,7 +81,7 @@ public final class DirectMpcFlHandler<ResourcePoolT extends NumericResourcePool>
   private Application<FlatModel, ProtocolBuilderNumeric> processModel(final FlatModel model) {
     return builder -> {
       Averager<SInt, ProtocolBuilderNumeric> averager = new SIntAverager<>();
-      final int numParams = model.getParams().length();
+      final long numParams = model.getParams().length();
       DRes<FlatModel> m = builder.seq(s -> () -> 1)
           .whileLoop(index -> index < rp.getNoOfParties() + 1, (whileBuilder, index) -> {
             if (index == rp.getMyId()) {
@@ -107,10 +107,10 @@ public final class DirectMpcFlHandler<ResourcePoolT extends NumericResourcePool>
     return builder -> builder.collections().openList(() -> params);
   }
 
-  private Computation<WeightedModelParams<SInt>, ProtocolBuilderNumeric> inputOtherParams(int size,
+  private Computation<WeightedModelParams<SInt>, ProtocolBuilderNumeric> inputOtherParams(long size,
       final int id) {
     return builder -> builder.par(parBuilder -> {
-      DRes<List<DRes<SInt>>> closedPars = parBuilder.collections().closeList(size, id);
+      DRes<List<DRes<SInt>>> closedPars = parBuilder.collections().closeList((int)size, id);
       DRes<SInt> closedWeight = parBuilder.numeric().input(null, id);
       return () -> new WeightedModelParamsImpl<>(closedWeight, closedPars.out());
     });

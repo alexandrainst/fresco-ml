@@ -3,17 +3,19 @@ package dk.alexandra.fresco.ml.fl;
 import dk.alexandra.fresco.framework.Party;
 import dk.alexandra.fresco.framework.ProtocolEvaluator;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.framework.builder.numeric.field.BigIntegerFieldDefinition;
 import dk.alexandra.fresco.framework.configuration.NetworkConfiguration;
 import dk.alexandra.fresco.framework.configuration.NetworkConfigurationImpl;
-import dk.alexandra.fresco.framework.configuration.NetworkTestUtils;
-import dk.alexandra.fresco.framework.network.AsyncNetwork;
+import dk.alexandra.fresco.framework.configuration.NetworkUtil;
 import dk.alexandra.fresco.framework.network.CloseableNetwork;
+import dk.alexandra.fresco.framework.network.socket.SocketNetwork;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngine;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngineImpl;
 import dk.alexandra.fresco.framework.sce.evaluator.BatchedProtocolEvaluator;
 import dk.alexandra.fresco.framework.sce.evaluator.BatchedStrategy;
 import dk.alexandra.fresco.framework.util.ExceptionConverter;
 import dk.alexandra.fresco.framework.util.ModulusFinder;
+import dk.alexandra.fresco.ml.fl.demo.TestSetup;
 import dk.alexandra.fresco.suite.ProtocolSuiteNumeric;
 import dk.alexandra.fresco.suite.dummy.arithmetic.DummyArithmeticProtocolSuite;
 import dk.alexandra.fresco.suite.dummy.arithmetic.DummyArithmeticResourcePool;
@@ -99,7 +101,7 @@ public class DummyArithTestSetup
 
     public static final int DEFAULT_MOD_LENGTH = 128;
     public static final int DEFAULT_MAX_LENGTH = 128;
-    public static final int DEFAULT_PRECISION = 128;
+    public static final int DEFAULT_PRECISION = 16;
 
     private int modLength = DEFAULT_MOD_LENGTH;
     private int maxLength = DEFAULT_MAX_LENGTH;
@@ -158,12 +160,11 @@ public class DummyArithTestSetup
       for (int i = 1; i < parties + 1; i++) {
         BigInteger modulus = ModulusFinder.findSuitableModulus(modLength);
         ProtocolSuiteNumeric<DummyArithmeticResourcePool> ps = new DummyArithmeticProtocolSuite(
-            modulus, maxLength, precision);
+            new BigIntegerFieldDefinition(modulus), maxLength, precision);
         ProtocolEvaluator<DummyArithmeticResourcePool> evaluator = new BatchedProtocolEvaluator<>(
             new BatchedStrategy<>(), ps);
         CloseableNetwork net = networks.get(i);
-        DummyArithmeticResourcePoolImpl rp = new DummyArithmeticResourcePoolImpl(i, parties,
-            modulus);
+        DummyArithmeticResourcePoolImpl rp = new DummyArithmeticResourcePoolImpl(i, parties, new BigIntegerFieldDefinition(modulus));
         SecureComputationEngine<DummyArithmeticResourcePool, ProtocolBuilderNumeric> sce =
             new SecureComputationEngineImpl<>(
             ps, evaluator);
@@ -184,7 +185,7 @@ public class DummyArithTestSetup
       for (int i = 1; i < numParties + 1; i++) {
         final NetworkConfiguration conf = confs.get(i - 1);
         Future<CloseableNetwork> f = es.submit(() -> {
-          return new AsyncNetwork(conf);
+          return new SocketNetwork(conf);
         });
         futureMap.put(i, f);
       }
@@ -199,7 +200,7 @@ public class DummyArithTestSetup
     private List<NetworkConfiguration> getNetConfs(int numParties) {
       Map<Integer, Party> parties = new HashMap<>(numParties);
       List<NetworkConfiguration> confs = new ArrayList<>(numParties);
-      List<Integer> ports = NetworkTestUtils.getFreePorts(numParties);
+      List<Integer> ports = NetworkUtil.getFreePorts(numParties);
       int id = 1;
       for (Integer port : ports) {
         parties.put(id, new Party(id, "localhost", port));

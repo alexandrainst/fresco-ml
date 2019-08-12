@@ -4,6 +4,8 @@ import static org.junit.Assert.assertTrue;
 
 import dk.alexandra.fresco.framework.builder.numeric.NumericResourcePool;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.ml.fl.demo.MnistTestContext;
+import dk.alexandra.fresco.ml.fl.demo.TestSetup;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,14 +20,13 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 
 /**
  * An abstract functional test of MPC based federated training of a model for the MNIST data set.
  *
- * @param <ResourcePoolT> the resource pool type used in the computation.
+ * @param <ResourcePoolT>
+ *          the resource pool type used in the computation.
  */
 public abstract class MpcMnistFlTest<ResourcePoolT extends NumericResourcePool> {
 
@@ -95,12 +96,7 @@ public abstract class MpcMnistFlTest<ResourcePoolT extends NumericResourcePool> 
       }
       DataSetIterator mnistTest = new MnistDataSetIterator(context.getBatchSize(), false,
           context.getSeed());
-      Evaluation eval = new Evaluation(MnistTestContext.NUM_CLASSES);
-      while (mnistTest.hasNext()) {
-        DataSet next = mnistTest.next();
-        INDArray output = trainer.getModel().output(next.getFeatureMatrix());
-        eval.eval(next.getLabels(), output);
-      }
+      Evaluation eval = trainer.getModel().evaluate(mnistTest);
       System.out.println(eval.stats());
       assertTrue(eval.accuracy() > 0.8);
       assertTrue(eval.precision() > 0.8);
@@ -116,7 +112,8 @@ public abstract class MpcMnistFlTest<ResourcePoolT extends NumericResourcePool> 
           context.getLocalExamples(), false, true, true, id);
       MultiLayerNetwork model = new MultiLayerNetwork(context.getConf());
       model.init();
-      FlTrainer trainer = new FlTrainerImpl(model, trainSet, context.getLocalEpochs(), flHandler);
+      FlTrainer trainer = new FlTrainerImpl(flHandler, model, trainSet, context.getLocalEpochs(),
+          context.getLocalExamples());
       return trainer;
     }
 

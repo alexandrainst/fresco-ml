@@ -1,12 +1,12 @@
-package dk.alexandra.fresco.ml.fl;
+package dk.alexandra.fresco.ml.fl.demo;
 
 import dk.alexandra.fresco.framework.Party;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.framework.builder.numeric.field.BigIntegerFieldDefinition;
 import dk.alexandra.fresco.framework.configuration.NetworkConfiguration;
 import dk.alexandra.fresco.framework.configuration.NetworkConfigurationImpl;
-import dk.alexandra.fresco.framework.configuration.NetworkTestUtils;
-import dk.alexandra.fresco.framework.network.AsyncNetwork;
 import dk.alexandra.fresco.framework.network.CloseableNetwork;
+import dk.alexandra.fresco.framework.network.socket.SocketNetwork;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngine;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngineImpl;
 import dk.alexandra.fresco.framework.sce.evaluator.BatchedProtocolEvaluator;
@@ -14,12 +14,15 @@ import dk.alexandra.fresco.framework.sce.evaluator.BatchedStrategy;
 import dk.alexandra.fresco.framework.util.AesCtrDrbg;
 import dk.alexandra.fresco.framework.util.ExceptionConverter;
 import dk.alexandra.fresco.framework.util.ModulusFinder;
-import dk.alexandra.fresco.framework.util.OpenedValueStoreImpl;
 import dk.alexandra.fresco.suite.spdz.SpdzProtocolSuite;
 import dk.alexandra.fresco.suite.spdz.SpdzResourcePool;
 import dk.alexandra.fresco.suite.spdz.SpdzResourcePoolImpl;
+import dk.alexandra.fresco.suite.spdz.storage.SpdzDataSupplier;
 import dk.alexandra.fresco.suite.spdz.storage.SpdzDummyDataSupplier;
+import dk.alexandra.fresco.suite.spdz.storage.SpdzOpenedValueStoreImpl;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +30,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 /**
  * A TestSetup using the SPDZ protocol suite to run MPC computations. This will use dummy
@@ -41,9 +45,12 @@ public class SpdzTestSetup implements TestSetup<SpdzResourcePool, ProtocolBuilde
   /**
    * Constructs a SpdzTestSetup given the required resources.
    *
-   * @param network a network
-   * @param resourcePool a SpdzResourcePool
-   * @param sce an sce
+   * @param network
+   *          a network
+   * @param resourcePool
+   *          a SpdzResourcePool
+   * @param sce
+   *          an sce
    */
   public SpdzTestSetup(CloseableNetwork network, SpdzResourcePool resourcePool,
       SecureComputationEngine<SpdzResourcePool, ProtocolBuilderNumeric> sce) {
@@ -89,8 +96,8 @@ public class SpdzTestSetup implements TestSetup<SpdzResourcePool, ProtocolBuilde
    */
   public static class Builder {
 
-    private static final int DEFAULT_MOD_BIT_LENGTH = 128;
-    private static final int DEFAULT_MAX_BIT_LENGTH = 128;
+    private static final int DEFAULT_MOD_BIT_LENGTH = 64;
+    private static final int DEFAULT_MAX_BIT_LENGTH = 64;
 
     private int maxLength = DEFAULT_MAX_BIT_LENGTH;
     private int modLength = DEFAULT_MOD_BIT_LENGTH;
@@ -120,13 +127,19 @@ public class SpdzTestSetup implements TestSetup<SpdzResourcePool, ProtocolBuilde
       Map<Integer, CloseableNetwork> netMap = createNetworks(parties);
       Map<Integer, SpdzTestSetup> setups = new HashMap<>(parties);
       for (int i = 1; i < parties + 1; i++) {
-        SpdzDummyDataSupplier supplier = new SpdzDummyDataSupplier(i, parties,
-            ModulusFinder.findSuitableModulus(modLength));
-        SpdzResourcePool rp = new SpdzResourcePoolImpl(i, parties, new OpenedValueStoreImpl<>(),
-            supplier, new AesCtrDrbg(new byte[32]));
+        
+        BigInteger modulus = ModulusFinder.findSuitableModulus(modLength);
+        final BigIntegerFieldDefinition definition = new BigIntegerFieldDefinition(modulus);
+        SpdzOpenedValueStoreImpl store = new SpdzOpenedValueStoreImpl();
+        SpdzDataSupplier supplier = new SpdzDummyDataSupplier(i, parties, definition, new BigInteger(modulus.bitLength(), new java.util.Random(0)).mod(modulus));
+        SpdzResourcePool rp = new SpdzResourcePoolImpl(i, parties, store, supplier, seed -> new AesCtrDrbg(seed));
+
+//        SpdzDummyDataSupplier supplier = new SpdzDummyDataSupplier(i, parties,
+//            ModulusFinder.findSuitableModulus(modLength));
+//        SpdzResourcePool rp = new SpdzResourcePoolImpl(i, parties, new OpenedValueStoreImpl<>(),
+//            supplier, new AesCtrDrbg(new byte[32]));
         SpdzProtocolSuite suite = new SpdzProtocolSuite(maxLength);
-        SecureComputationEngine<SpdzResourcePool, ProtocolBuilderNumeric> sce =
-            new SecureComputationEngineImpl<>(
+        SecureComputationEngine<SpdzResourcePool, ProtocolBuilderNumeric> sce = new SecureComputationEngineImpl<>(
             suite, new BatchedProtocolEvaluator<>(new BatchedStrategy<>(), suite));
         setups.put(i, new SpdzTestSetup(netMap.get(i), rp, sce));
       }
@@ -145,7 +158,7 @@ public class SpdzTestSetup implements TestSetup<SpdzResourcePool, ProtocolBuilde
       for (int i = 1; i < numParties + 1; i++) {
         final NetworkConfiguration conf = confs.get(i - 1);
         Future<CloseableNetwork> f = es.submit(() -> {
-          return new AsyncNetwork(conf);
+          return new SocketNetwork(conf);
         });
         futureMap.put(i, f);
       }
@@ -160,7 +173,7 @@ public class SpdzTestSetup implements TestSetup<SpdzResourcePool, ProtocolBuilde
     private List<NetworkConfiguration> getNetConfs(int numParties) {
       Map<Integer, Party> parties = new HashMap<>(numParties);
       List<NetworkConfiguration> confs = new ArrayList<>(numParties);
-      List<Integer> ports = NetworkTestUtils.getFreePorts(numParties);
+      List<Integer> ports = getFreePorts(numParties);
       int id = 1;
       for (Integer port : ports) {
         parties.put(id, new Party(id, "localhost", port));
@@ -170,6 +183,40 @@ public class SpdzTestSetup implements TestSetup<SpdzResourcePool, ProtocolBuilde
         confs.add(new NetworkConfigurationImpl(i, parties));
       }
       return confs;
+    }
+
+    /**
+     * Finds {@code portsRequired} free ports and returns their port numbers.
+     * <p>
+     * NOTE: two subsequent calls to this method can return overlapping sets of free ports (same
+     * with parallel calls).
+     * </p>
+     *
+     * @param portsRequired
+     *          number of free ports required
+     * @return list of port numbers of free ports
+     */
+    public static List<Integer> getFreePorts(int portsRequired) {
+      List<ServerSocket> sockets = new ArrayList<>(portsRequired);
+      for (int i = 0; i < portsRequired; i++) {
+        try {
+          ServerSocket s = new ServerSocket(0);
+          sockets.add(s);
+          // we keep the socket open to ensure that the port is not re-used in a sub-sequent
+          // iteration
+        } catch (IOException e) {
+          throw new RuntimeException("No free ports", e);
+        }
+      }
+      return sockets.stream().map(socket -> {
+        int portNumber = socket.getLocalPort();
+        try {
+          socket.close();
+        } catch (IOException e) {
+          throw new RuntimeException("No free ports", e);
+        }
+        return portNumber;
+      }).collect(Collectors.toList());
     }
   }
 

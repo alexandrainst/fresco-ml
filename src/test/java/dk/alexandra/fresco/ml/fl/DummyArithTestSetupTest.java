@@ -1,5 +1,6 @@
 package dk.alexandra.fresco.ml.fl;
 
+import dk.alexandra.fresco.ml.fl.demo.TestSetup;
 import java.util.Map;
 import org.junit.Test;
 

@@ -2,12 +2,14 @@ package dk.alexandra.fresco.ml.fl;
 
 import dk.alexandra.fresco.framework.ProtocolEvaluator;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.framework.builder.numeric.field.BigIntegerFieldDefinition;
 import dk.alexandra.fresco.framework.network.CloseableNetwork;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngine;
 import dk.alexandra.fresco.framework.sce.SecureComputationEngineImpl;
 import dk.alexandra.fresco.framework.sce.evaluator.BatchedProtocolEvaluator;
 import dk.alexandra.fresco.framework.sce.evaluator.BatchedStrategy;
 import dk.alexandra.fresco.framework.util.ModulusFinder;
+import dk.alexandra.fresco.ml.fl.demo.TestSetup;
 import dk.alexandra.fresco.suite.ProtocolSuiteNumeric;
 import dk.alexandra.fresco.suite.dummy.arithmetic.DummyArithmeticProtocolSuite;
 import dk.alexandra.fresco.suite.dummy.arithmetic.DummyArithmeticResourcePool;
@@ -27,7 +29,7 @@ public class SinglePartyTestSetup
   private final SecureComputationEngine<DummyArithmeticResourcePool, ProtocolBuilderNumeric> sce;
   private static final int DEFAULT_MOD_LENGTH = 128;
   private static final int DEFAULT_MAX_LENGTH = 128;
-  private static final int DEFAULT_PRECISION = 128;
+  private static final int DEFAULT_PRECISION = 16;
 
   /**
    * Creates a single party test set up.
@@ -35,12 +37,13 @@ public class SinglePartyTestSetup
   public SinglePartyTestSetup() {
     CloseableNetwork net = new SinglePartyTestNetwork();
     BigInteger modulus = ModulusFinder.findSuitableModulus(DEFAULT_MOD_LENGTH);
-    ProtocolSuiteNumeric<DummyArithmeticResourcePool> ps = new DummyArithmeticProtocolSuite(modulus,
+    BigIntegerFieldDefinition definition = new BigIntegerFieldDefinition(modulus);
+    ProtocolSuiteNumeric<DummyArithmeticResourcePool> ps = new DummyArithmeticProtocolSuite(definition,
         DEFAULT_MAX_LENGTH, DEFAULT_PRECISION);
     ProtocolEvaluator<DummyArithmeticResourcePool> evaluator = new BatchedProtocolEvaluator<>(
         new BatchedStrategy<>(), ps);
     this.net = net;
-    this.rp = new DummyArithmeticResourcePoolImpl(1, 1, modulus);
+    this.rp = new DummyArithmeticResourcePoolImpl(1, 1, definition);
     this.sce = new SecureComputationEngineImpl<>(ps, evaluator);
   }
 

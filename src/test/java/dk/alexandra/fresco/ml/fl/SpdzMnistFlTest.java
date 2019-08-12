@@ -1,6 +1,8 @@
 package dk.alexandra.fresco.ml.fl;
 
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
+import dk.alexandra.fresco.ml.fl.demo.SpdzTestSetup;
+import dk.alexandra.fresco.ml.fl.demo.TestSetup;
 import dk.alexandra.fresco.suite.spdz.SpdzResourcePool;
 import java.util.HashMap;
 import java.util.Map;
