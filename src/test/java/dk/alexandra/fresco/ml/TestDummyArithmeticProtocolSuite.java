@@ -21,5 +21,19 @@ public class TestDummyArithmeticProtocolSuite extends AbstractDummyArithmeticTes
     runTest(new NNTests.TestFederatedLearning<>(), EvaluationStrategy.SEQUENTIAL,
         2);
   }
+  
+  @Test
+  public void test_logistic_regression_prediction() throws Exception {
+    runTest(new LRTests.TestLogRegPrediction<>(), EvaluationStrategy.SEQUENTIAL, 2);
+  }
 
+  @Test
+  public void test_logistic_regression_sgd_single_epoch() throws Exception {
+    runTest(new LRTests.TestLogRegSGDSingleEpoch<>(), EvaluationStrategy.SEQUENTIAL, 2);
+  }
+  
+  @Test
+  public void test_logistic_regression() throws Exception {
+    runTest(new LRTests.TestLogReg<>(), EvaluationStrategy.SEQUENTIAL, 2);
+  }
 }
