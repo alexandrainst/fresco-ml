@@ -1,8 +1,8 @@
 package dk.alexandra.fresco.ml.utils;
 
 import dk.alexandra.fresco.lib.collections.Matrix;
-import dk.alexandra.fresco.ml.ActivationFunctions;
-import dk.alexandra.fresco.ml.FullyConnectedLayerParameters;
+import dk.alexandra.fresco.ml.nn.ActivationFunctions;
+import dk.alexandra.fresco.ml.nn.FullyConnectedLayerParameters;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;

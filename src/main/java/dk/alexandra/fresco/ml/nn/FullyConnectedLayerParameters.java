@@ -1,7 +1,7 @@
-package dk.alexandra.fresco.ml;
+package dk.alexandra.fresco.ml.nn;
 
 import dk.alexandra.fresco.lib.collections.Matrix;
-import dk.alexandra.fresco.ml.ActivationFunctions.Type;
+import dk.alexandra.fresco.ml.nn.ActivationFunctions.Type;
 
 public class FullyConnectedLayerParameters<T> {
 

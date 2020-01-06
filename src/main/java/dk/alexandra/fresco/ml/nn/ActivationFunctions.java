@@ -1,4 +1,4 @@
-package dk.alexandra.fresco.ml;
+package dk.alexandra.fresco.ml.nn;
 
 import dk.alexandra.fresco.lib.real.SReal;
 import dk.alexandra.fresco.framework.DRes;

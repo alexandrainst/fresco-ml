@@ -1,5 +1,6 @@
 package dk.alexandra.fresco.ml.lr;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,56 +17,55 @@ import dk.alexandra.fresco.lib.real.SReal;
  * computation performs a linear regression on the data and the expected outcome as log-odds. See
  * also <a href=
  * "https://en.wikipedia.org/wiki/Logistic_regression">https://en.wikipedia.org/wiki/Logistic_regression</a>.
- * 
  */
 public class LogisticRegression implements Computation<List<DRes<SReal>>, ProtocolBuilderNumeric> {
 
-  private Matrix<DRes<SReal>> data;
-  private List<DRes<SReal>> expected;
-  private double rate;
-  private int epochs;
+    private Matrix<DRes<SReal>> data;
+    private List<DRes<SReal>> expected;
+    private double rate;
+    private int epochs;
 
-  public LogisticRegression(Matrix<DRes<SReal>> data, List<DRes<SReal>> expected, double rate,
-      int epochs) {
-    this.data = data;
-    this.expected = expected;
-    this.rate = rate;
-    this.epochs = epochs;
-  }
-
-  @Override
-  public DRes<List<DRes<SReal>>> buildComputation(ProtocolBuilderNumeric builder) {
-
-    return builder.seq(seq -> {
-      int round = 0;
-      List<DRes<SReal>> b =
-          new ArrayList<>(Collections.nCopies(data.getWidth() + 1, seq.realNumeric().known(0.0)));
-      return new IterationState(round, () -> b);
-    }).whileLoop((state) -> state.round < epochs, (seq, state) -> {
-      seq.debug().marker("Round " + state.round, System.out);
-      DRes<List<DRes<SReal>>> newB =
-          new LogisticRegressionSGD(data, expected, rate, state.b.out()).buildComputation(seq);
-      return new IterationState(state.round + 1, newB);
-    }).seq((seq, state) -> {
-      return state.b;
-    });
-  }
-
-  private static final class IterationState implements DRes<IterationState> {
-
-    private int round;
-    private final DRes<List<DRes<SReal>>> b;
-
-    private IterationState(int round, DRes<List<DRes<SReal>>> value) {
-      this.round = round;
-      this.b = value;
+    public LogisticRegression(Matrix<DRes<SReal>> data, List<DRes<SReal>> expected, double rate,
+                              int epochs) {
+        this.data = data;
+        this.expected = expected;
+        this.rate = rate;
+        this.epochs = epochs;
     }
 
     @Override
-    public IterationState out() {
-      return this;
+    public DRes<List<DRes<SReal>>> buildComputation(ProtocolBuilderNumeric builder) {
+
+        return builder.seq(seq -> {
+            int round = 0;
+            List<DRes<SReal>> b =
+                    new ArrayList<>(Collections.nCopies(data.getWidth() + 1, seq.realNumeric().known(BigDecimal.ZERO)));
+            return new IterationState(round, () -> b);
+        }).whileLoop((state) -> state.round < epochs, (seq, state) -> {
+            seq.debug().marker("Round " + state.round, System.out);
+            DRes<List<DRes<SReal>>> newB =
+                    new LogisticRegressionSGD(data, expected, rate, state.b.out()).buildComputation(seq);
+            return new IterationState(state.round + 1, newB);
+        }).seq((seq, state) -> {
+            return state.b;
+        });
     }
 
-  }
+    private static final class IterationState implements DRes<IterationState> {
+
+        private int round;
+        private final DRes<List<DRes<SReal>>> b;
+
+        private IterationState(int round, DRes<List<DRes<SReal>>> value) {
+            this.round = round;
+            this.b = value;
+        }
+
+        @Override
+        public IterationState out() {
+            return this;
+        }
+
+    }
 
 }
