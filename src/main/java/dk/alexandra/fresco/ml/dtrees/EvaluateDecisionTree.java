@@ -6,7 +6,7 @@ import dk.alexandra.fresco.framework.builder.Computation;
 import dk.alexandra.fresco.framework.builder.numeric.ProtocolBuilderNumeric;
 import dk.alexandra.fresco.framework.util.Pair;
 import dk.alexandra.fresco.framework.value.SInt;
-import dk.alexandra.fresco.ml.dtrees.utils.LessThan;
+import dk.alexandra.fresco.ml.libext.LessThan;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
